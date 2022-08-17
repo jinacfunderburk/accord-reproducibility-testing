@@ -1,4 +1,4 @@
-python_cpp_skel
+gconcord
 ===============
 
 A python skeleton project built with [pybind11](https://github.com/pybind/pybind11) and [mason](https://github.com/mapbox/mason/).
@@ -41,6 +41,6 @@ Example
 -------
 
 ```python
-import python_cpp_skel
-python_cpp_skel.add(1, 2)
+import gconcord
+gconcord.add(1, 2)
 ```

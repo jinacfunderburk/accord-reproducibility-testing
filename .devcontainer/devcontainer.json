@@ -11,7 +11,7 @@
 	"forwardPorts": [8888],
 	"portsAttributes": {
 		"8888": {
-			"label": "pybind11-skel",
+			"label": "gconcord",
 			"requireLocalPort": true,
 			"onAutoForward": "ignore"
 		}
@@ -33,10 +33,10 @@
 		}
 	},
 
-	"workspaceFolder": "/workspaces/pybind11-skel",
+	"workspaceFolder": "/workspaces/gconcord",
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "rmdir /home/jovyan/work && ln -s /workspaces/pybind11-skel /home/jovyan/work",
+	"postCreateCommand": "rmdir /home/jovyan/work && ln -s /workspaces/gconcord /home/jovyan/work",
 
 	// Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
 	"remoteUser": "jovyan"
