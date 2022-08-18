@@ -9,3 +9,4 @@ _generate
 build
 var
 mason_packages
+.ipynb_checkpoints/
