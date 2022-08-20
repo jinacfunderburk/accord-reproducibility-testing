@@ -37,10 +37,8 @@ namespace py = pybind11;
 Eigen::SparseMatrix<double> ccista(
     Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> S,
     Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> LambdaMat,
-    double lambda2,
     double epstol,
-    int maxitr,
-    int steptype
+    int maxitr
     );
 // 
 // Eigen::SparseMatrix<float, Eigen::RowMajor> sparsify_r(Eigen::MatrixXf &xs);
