@@ -20,7 +20,8 @@ def ccista(S, lambda1, lambda2=0.0, epstol=1e-5, maxitr=100, steptype=1, penaliz
         np.fill_diagonal(lambda1, 0)
     print(lambda1)
 
-    return _cc.ccista(S, lambda1, lambda2, epstol, maxitr, steptype)
+    # return _cc.ccista(S, lambda1, lambda2, epstol, maxitr, steptype)
+    return _cc.ccista(S, lambda1, epstol, maxitr)
     # return _cc.ccista(S, S)
 
 def h1(X, S):

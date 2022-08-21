@@ -54,8 +54,11 @@ inline double shrink(double a, double b) {
 //}
  
 void grad_h1(Ref<SparseMatrix<double>> X_, Ref<MatrixXd, 0, Stride<Dynamic, Dynamic>> S_, Ref<MatrixXd> G_) {
+
     MatrixXd W = S_ * X_;
-    // G = -
+    G = -
+
+
     std::cout << W << std::endl;
 }
 
@@ -70,6 +73,8 @@ SparseMatrix<double> ccista(
 
     SparseMatrix<double> X(p, p);
     X.setIdentity();
+    DiagonalMatrix<double, Dynamic> Xdiag;
+    Xdiag = X.diagonal().asDiagonal();
     SparseMatrix<double> Xn(p, p);
     MatrixXd G(p, p);               // gradient
     MatrixXd W(p, p);               // S*X
