@@ -1,10 +1,10 @@
-# import _gconcord as _cc
+# import _gconcorde as _cce
 import numpy as np
 
 def check_symmetry(a, rtol=1e-05, atol=1e-08):
     return np.allclose(a, a.T, rtol=rtol, atol=atol)
 
-# def ccista(S, lambda1, lambda2=0.0, epstol=1e-5, maxitr=100, steptype=1, penalize_diagonal=False):
+# def cceista(S, lambda1, lambda2=0.0, epstol=1e-5, maxitr=100, steptype=1, penalize_diagonal=False):
 
 #     assert type(S) == np.ndarray and S.dtype == "float64"
 
@@ -21,17 +21,20 @@ def check_symmetry(a, rtol=1e-05, atol=1e-08):
 #     print(lambda1)
 
 #     # return _cc.ccista(S, lambda1, lambda2, epstol, maxitr, steptype)
-#     return _cc.ccista(S, lambda1, epstol, maxitr)
+#     return _cce.cceista(S, lambda1, epstol, maxitr)
 #     # return _cc.ccista(S, S)
 
 def h1(X, S):
 
     return -np.log(X.diagonal()).sum() + 0.5*np.matmul(X, np.matmul(S, X)).trace()
 
-def grad_h1(X, S):
+def grad_h1(X, S, constant=False):
 
-    W = np.matmul(S, X)
-    G = - np.diag(1/X.diagonal()) + 0.5*(W + W.T)
+    if constant:
+        G = np.matmul(X, S)
+    else:
+        W = np.matmul(X, S)
+        G = - np.diag(1/X.diagonal()) + W
 
     return G
 
@@ -82,7 +85,7 @@ def subgrad(S, X, lambda1):
 
     return g_h1 + subg_h2
 
-def pyccista(S, lambda1, epstol=1e-5, maxitr=100, penalize_diagonal=False):
+def pycceista(S, lambda1, epstol=1e-5, maxitr=100, penalize_diagonal=False):
 
     assert check_symmetry(S)
     p, _ = S.shape
@@ -123,9 +126,54 @@ def pyccista(S, lambda1, epstol=1e-5, maxitr=100, penalize_diagonal=False):
         itr_info = [[inner_itr_count, delta_subg, h]]
         run_info += itr_info
 
-        # print(itr_info)
-
         if delta_subg < epstol or len(run_info) > maxitr:
+            break
+        else:
+            X = Xn
+
+    return Xn, np.array(run_info)
+
+def power_method(S, n=100):
+    u = np.ones(len(S))
+    for i in range(n):
+        u = S @ u
+        eigenvalue = np.max(u)
+        u = u/eigenvalue
+        
+    return eigenvalue
+
+def pycce_constant(S, lambda1, epstol=1e-5, maxitr=100, penalize_diagonal=False):
+
+    assert check_symmetry(S)
+    p, _ = S.shape
+
+    if type(lambda1) == float:
+        lambda1 = lambda1mat(lambda1, p, penalize_diagonal)
+
+    assert check_symmetry(lambda1)
+
+    X = np.identity(p)
+    tau = 1/power_method(S)
+
+    run_info = []
+    itr_count = 0
+    while True:
+        G = grad_h1(X, S, constant=True)
+        step = X - tau*G
+
+        y = np.diag(step)
+        Xn = soft_threshold(step, tau*lambda1)
+        np.fill_diagonal(Xn, 0.5*(y+np.sqrt(y**2 + 4*tau)))
+
+        itr_count += 1
+
+        h = h1(Xn, S) + h2(Xn, lambda1)
+        Xnorm = np.linalg.norm(Xn-X)
+
+        itr_info = [[itr_count, Xnorm, h]]
+        run_info += itr_info
+
+        if Xnorm < epstol or len(run_info) > maxitr:
             break
         else:
             X = Xn

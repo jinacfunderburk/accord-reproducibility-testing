@@ -56,7 +56,6 @@ inline double shrink(double a, double b) {
 void grad_h1(Ref<SparseMatrix<double>> X_, Ref<MatrixXd, 0, Stride<Dynamic, Dynamic>> S_, Ref<MatrixXd> G_) {
 
     MatrixXd W = S_ * X_;
-    G = -
 
 
     std::cout << W << std::endl;

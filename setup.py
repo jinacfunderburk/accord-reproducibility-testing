@@ -11,7 +11,7 @@ includes = [
 
 ext_modules = [
     Extension(
-        '_gconcord',
+        '_gconcorde',
         ['src/main.cpp', 'src/core.cpp'],
         include_dirs=includes,
         extra_compile_args=['-std=libc++'],
@@ -20,7 +20,7 @@ ext_modules = [
 ]
 
 setup(
-    name='gconcord',
+    name='gconcorde',
     version=__version__,
     author='Blake Thompson',
     author_email='blake@mapbox.com',
