@@ -28,7 +28,7 @@ def h1(X, S, constant=False):
     if constant:
         return 0.5*np.matmul(X.T, np.matmul(X, S)).trace()
     else:
-        return -np.log(X.diagonal()).sum() + 0.5*np.matmul(X, np.matmul(S, X)).trace()
+        return -np.log(X.diagonal()).sum() + 0.5*np.matmul(X.T, np.matmul(X, S)).trace()
 
 def grad_h1(X, S, constant=False):
 
@@ -154,7 +154,7 @@ def pycce_constant(S, lambda1, epstol=1e-5, maxitr=100, penalize_diagonal=False)
     assert check_symmetry(lambda1)
 
     X = np.identity(p)
-    tau = 1/power_method(S)
+    tau = 0.9 * 1/power_method(S)
 
     run_info = []
     itr_count = 0
