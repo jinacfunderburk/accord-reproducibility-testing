@@ -93,34 +93,29 @@ def pyccista(S, lambda1, epstol=1e-5, maxitr=100, penalize_diagonal=False):
     assert check_symmetry(lambda1)
 
     X = np.identity(p)
+    G = grad_h1(X, S)
 
     run_info = []
     while True:
         tau = 1.0
         c = 0.5
 
-        G = grad_h1(X, S)
-
         inner_itr_count = 0
         while True:
 
-            step = X - tau*G
+            Xn = soft_threshold(X - tau*G, tau*lambda1)
 
-            if np.all(step.diagonal() > 0):
-
-                Xn = soft_threshold(step, tau*lambda1)
-
-                if h1(Xn, S) <= quadratic_approx(Xn, X, S, tau):
-                    break
-
-            tau = c*tau
-            inner_itr_count += 1
+            if np.all(Xn.diagonal() > 0) and (h1(Xn, S) <= quadratic_approx(Xn, X, S, tau)):
+                break
+            else:
+                tau = c*tau
+                inner_itr_count += 1
         
         subg = subgrad(S, Xn, lambda1)
         delta_subg = np.linalg.norm(subg)/np.linalg.norm(Xn)
-        h = h1(Xn, S) + h2(Xn, lambda1)
+        hn = h1(Xn, S) + h2(Xn, lambda1)
 
-        itr_info = [[inner_itr_count, delta_subg, h]]
+        itr_info = [[inner_itr_count, delta_subg, hn]]
         run_info += itr_info
 
         # print(itr_info)
@@ -129,5 +124,6 @@ def pyccista(S, lambda1, epstol=1e-5, maxitr=100, penalize_diagonal=False):
             break
         else:
             X = Xn
+            G = grad_h1(X, S) # not needed
 
     return Xn, np.array(run_info)

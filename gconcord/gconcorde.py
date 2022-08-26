@@ -24,9 +24,11 @@ def check_symmetry(a, rtol=1e-05, atol=1e-08):
 #     return _cce.cceista(S, lambda1, epstol, maxitr)
 #     # return _cc.ccista(S, S)
 
-def h1(X, S):
-
-    return -np.log(X.diagonal()).sum() + 0.5*np.matmul(X, np.matmul(S, X)).trace()
+def h1(X, S, constant=False):
+    if constant:
+        return 0.5*np.matmul(X.T, np.matmul(X, S)).trace()
+    else:
+        return -np.log(X.diagonal()).sum() + 0.5*np.matmul(X, np.matmul(S, X)).trace()
 
 def grad_h1(X, S, constant=False):
 
@@ -59,9 +61,11 @@ def lambda1mat(lambda1, p, penalize_diagonal):
     
     return mat
 
-def h2(X, lambda1):
-
-    return (lambda1 * np.abs(X)).sum()
+def h2(X, lambda1, constant=False):
+    if constant:
+        return -np.log(X.diagonal()).sum() + (lambda1 * np.abs(X)).sum()
+    else:
+        return (lambda1 * np.abs(X)).sum()
 
 def subgrad_h2(X, lambda1, g_h1=None):
 
@@ -96,40 +100,37 @@ def pycceista(S, lambda1, epstol=1e-5, maxitr=100, penalize_diagonal=False):
     assert check_symmetry(lambda1)
 
     X = np.identity(p)
+    G = grad_h1(X, S)
 
     run_info = []
     while True:
         tau = 1.0
         c = 0.5
 
-        G = grad_h1(X, S)
-
         inner_itr_count = 0
         while True:
 
-            step = X - tau*G
+            Xn = soft_threshold(X - tau*G, tau*lambda1)
 
-            if np.all(step.diagonal() > 0):
-
-                Xn = soft_threshold(step, tau*lambda1)
-
-                if h1(Xn, S) <= quadratic_approx(Xn, X, S, tau):
-                    break
-
-            tau = c*tau
-            inner_itr_count += 1
+            if np.all(Xn.diagonal() > 0) and (h1(Xn, S) <= quadratic_approx(Xn, X, S, tau)):
+                break
+            else:
+                tau = c*tau
+                inner_itr_count += 1
         
-        subg = subgrad(S, Xn, lambda1)
-        delta_subg = np.linalg.norm(subg)/np.linalg.norm(Xn)
-        h = h1(Xn, S) + h2(Xn, lambda1)
+        # subg = subgrad(S, Xn, lambda1)
+        # delta_subg = np.linalg.norm(subg)/np.linalg.norm(Xn)
+        Xnorm = np.linalg.norm(Xn-X)
+        hn = h1(Xn, S) + h2(Xn, lambda1)
 
-        itr_info = [[inner_itr_count, delta_subg, h]]
+        itr_info = [[inner_itr_count, Xnorm, hn]]
         run_info += itr_info
 
-        if delta_subg < epstol or len(run_info) > maxitr:
+        if Xnorm < epstol or len(run_info) > maxitr:
             break
         else:
             X = Xn
+            G = grad_h1(X, S)
 
     return Xn, np.array(run_info)
 
@@ -161,14 +162,18 @@ def pycce_constant(S, lambda1, epstol=1e-5, maxitr=100, penalize_diagonal=False)
         G = grad_h1(X, S, constant=True)
         step = X - tau*G
 
-        y = np.diag(step)
-        Xn = soft_threshold(step, tau*lambda1)
-        np.fill_diagonal(Xn, 0.5*(y+np.sqrt(y**2 + 4*tau)))
+        if penalize_diagonal:
+            # this gives omega with all 0's
+            Xn = soft_threshold(step, tau*lambda1)
+        else:
+            y = np.diag(step)
+            Xn = soft_threshold(step, tau*lambda1)
+            np.fill_diagonal(Xn, 0.5*(y+np.sqrt(y**2 + 4*tau)))
 
         itr_count += 1
 
-        h = h1(Xn, S) + h2(Xn, lambda1)
         Xnorm = np.linalg.norm(Xn-X)
+        h = h1(Xn, S, constant=True) + h2(Xn, lambda1, constant=True)
 
         itr_info = [[itr_count, Xnorm, h]]
         run_info += itr_info
