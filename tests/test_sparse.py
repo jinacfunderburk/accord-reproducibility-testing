@@ -1,4 +1,4 @@
-import gconcord as sk
+import gconcorde as sk
 import numpy as np 
 
 data = np.array(

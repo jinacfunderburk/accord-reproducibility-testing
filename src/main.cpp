@@ -35,15 +35,51 @@ namespace py = pybind11;
 // Eigen::SparseMatrix<float> ccista(Eigen::Ref<Eigen::MatrixXf> S);
 // Eigen::SparseMatrix<double> ccista(
 Eigen::SparseMatrix<double> ccista(
+//void ccista(
     Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> S,
     Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> LambdaMat,
     double epstol,
-    int maxitr
+    int maxitr,
+    Eigen::Ref<Eigen::VectorXi> hist_inner_itr_count,
+    Eigen::Ref<Eigen::VectorXd> hist_delta_subg,
+    Eigen::Ref<Eigen::VectorXd> hist_hn
     );
+
+Eigen::SparseMatrix<double> cceista(
+//void ccista(
+    Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> S,
+    Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> LambdaMat,
+    double epstol,
+    int maxitr,
+    Eigen::Ref<Eigen::VectorXi> hist_inner_itr_count,
+    Eigen::Ref<Eigen::VectorXd> hist_delta_updates,
+    Eigen::Ref<Eigen::VectorXd> hist_hn
+    );
+
+Eigen::SparseMatrix<double> cce_constant(
+//void ccista(
+    Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> S,
+    Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> LambdaMat,
+    double epstol,
+    int maxitr,
+    double tau,
+    Eigen::Ref<Eigen::VectorXi> hist_inner_itr_count,
+    Eigen::Ref<Eigen::VectorXd> hist_delta_updates,
+    Eigen::Ref<Eigen::VectorXd> hist_hn
+    );
+// Eigen::SparseMatrix<double> ccista(
+//     Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> S,
+//     Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> LambdaMat,
+//     double epstol,
+//     int maxitr,
+//     Eigen::Ref<Eigen::VectorXi> hist_inner_itr_count,
+//     Eigen::Ref<Eigen::VectorXd> hist_delta_subg,
+//     Eigen::Ref<Eigen::VectorXd> hist_hn
+//     );
 // 
 // Eigen::SparseMatrix<float, Eigen::RowMajor> sparsify_r(Eigen::MatrixXf &xs);
 
-PYBIND11_MODULE(_gconcord, m) {
+PYBIND11_MODULE(_gconcorde, m) {
 
     m.doc() = R"pbdoc(
         Pybind11 example plugin
@@ -67,9 +103,26 @@ PYBIND11_MODULE(_gconcord, m) {
     m.def(
         "ccista",
         &ccista,
-        py::return_value_policy::reference,
         R"pbdoc(
-            Create sparse version of input matrix
+            CC-ISTA
+
+            Column-major sparse matrix
+        )pbdoc");
+
+    m.def(
+        "cceista",
+        &cceista,
+        R"pbdoc(
+            CCE-ISTA
+
+            Column-major sparse matrix
+        )pbdoc");
+
+    m.def(
+        "cce_constant",
+        &cce_constant,
+        R"pbdoc(
+            CCE-Constant
 
             Column-major sparse matrix
         )pbdoc");

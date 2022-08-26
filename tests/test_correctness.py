@@ -1,4 +1,4 @@
-import gconcord as cc
+import gconcorde as cc
 import numpy as np
 
 # import importlib
