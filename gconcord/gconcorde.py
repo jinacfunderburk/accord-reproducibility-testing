@@ -154,7 +154,7 @@ def pycce_constant(S, lambda1, epstol=1e-5, maxitr=100, penalize_diagonal=False)
     assert check_symmetry(lambda1)
 
     X = np.identity(p)
-    tau = 0.9 * 1/power_method(S)
+    tau = 1/power_method(S)
 
     run_info = []
     itr_count = 0
