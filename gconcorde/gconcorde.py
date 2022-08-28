@@ -200,7 +200,9 @@ def pycce_constant(S, lambda1, epstol=1e-5, maxitr=100, penalize_diagonal=False)
 
         if penalize_diagonal:
             # this gives omega with all 0's
+            y = np.diag(step) - np.diag(tau*lambda1)
             Xn = soft_threshold(step, tau*lambda1)
+            np.fill_diagonal(Xn, 0.5*(y+np.sqrt(y**2 + 4*tau)))
         else:
             y = np.diag(step)
             Xn = soft_threshold(step, tau*lambda1)
