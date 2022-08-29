@@ -279,117 +279,73 @@ SparseMatrix<double> cceista(
 
     }
     return Xn;
-
-    // return X;
 }
 
 SparseMatrix<double> cce_constant(
-// void ccista(
     Ref<MatrixXd, 0, Stride<Dynamic, Dynamic>> S, 
     Ref<MatrixXd, 0, Stride<Dynamic, Dynamic>> LambdaMat,
     double epstol,
     int maxitr,
     double tau,
-    Ref<VectorXi> hist_inner_itr_count,
+    bool penalize_diagonal,
     Ref<VectorXd> hist_delta_updates,
     Ref<VectorXd> hist_hn
     ) {
 
     int p = S.cols();
 
-    // double epstol=1e-5;
-    // int maxitr=100;
-    // VectorXi hist_inner_itr_count = VectorXi::Zero(maxitr);
-    // VectorXd hist_delta_subg = VectorXd::Zero(maxitr);
-    // VectorXd hist_hn = VectorXd::Zero(maxitr);
-
     SparseMatrix<double> X(p, p), Xn(p, p); // current and next estimate
     SparseMatrix<double> Step(p, p);        // Xn - X
-    MatrixXd W(p, p), Wn(p, p);             // S*X
+    MatrixXd W(p, p), Wn(p, p);             // X*S
 
-    MatrixXd subg(p, p);
     MatrixXd grad_h1(p, p);                 // gradient of h1
-    MatrixXd subgrad_h2(p, p);              // subgradient of h2
     MatrixXd tmp(p, p);
     ArrayXd y(p);
 
-    double Q, hn, h1, h1n, delta_updates;
-    double tau_ = 1.0;
-    double c_ = 0.5;
+    double hn, h1, h1n, delta_updates;
 
     X.setIdentity();            // initial guess: X = I
     grad_h1 = X * S;
     h1 = - X.diagonal().array().log().sum() + 0.5 * (SparseMatrix<double>(X.transpose())*W).trace();
 
-    int outer_itr_count, inner_itr_count;        // iteration counts
+    int itr_count;        // iteration counts
 
-    outer_itr_count = 0;
+    itr_count = 0;
     while (true) {
- 
-        inner_itr_count = 0;
+        
+        tmp = MatrixXd(X) - tau*grad_h1;
 
-            tmp = MatrixXd(X) - tau*grad_h1;
-            //y = tmp.diagonal().array();
-            //y = 0.5 * (y+(y.pow(2.0)+4*tau*Eigen::VectorXd::Ones(p).array()).sqrt());
+        if (penalize_diagonal == true) {
+            y = tmp.diagonal().array() - tau*LambdaMat.diagonal().array();
+            y = 0.5 * (y+(y.pow(2.0)+4*tau*Eigen::VectorXd::Ones(p).array()).sqrt());
             sthreshmat(tmp, tau, LambdaMat);
-            //tmp.diagonal() = y;
+            tmp.diagonal() = y;
             Xn = tmp.sparseView();
+        } else {
+            y = tmp.diagonal().array();
+            y = 0.5 * (y+(y.pow(2.0)+4*tau*Eigen::VectorXd::Ones(p).array()).sqrt());
+            sthreshmat(tmp, tau, LambdaMat);
+            tmp.diagonal() = y;
+            Xn = tmp.sparseView();
+        }
+       
 
-            Wn = Xn * S;
-            // if (tmp.diagonal().minCoeff() > 0) {
-
-            Step = Xn - X;
-            //     Wn = Xn * S;
-
-            //     // h1n = - Xn.diagonal().array().log().sum() + 0.5 * (SparseMatrix<double>(Xn.transpose()).cwiseProduct(Wn).sum());
-            h1n = - Xn.diagonal().array().log().sum() + 0.5 * (SparseMatrix<double>(Xn.transpose())*Wn).trace();
-            //     Q = h1 + Step.cwiseProduct(grad_h1).sum() + (0.5/tau)*Step.squaredNorm();
-
-            //     if (h1n <= Q)
-            //         break; 
-
-            // }
-
-            // getting here means:
-            // 1. at least one diagonal element is negative
-            // 2. sufficient descent condition wasn't satisfied
-            // tau *= c_;
-            // inner_itr_count += 1;
-
-
-        // grad_h1 = -1*Xn.diagonal().asDiagonal().inverse();
-        // grad_h1 += Wn;
+        Wn = Xn * S;
+        Step = Xn - X;
+        h1n = - Xn.diagonal().array().log().sum() + 0.5 * (SparseMatrix<double>(Xn.transpose())*Wn).trace();
         grad_h1 = Wn;
 
-        // // subgrad_h2(X, lambda1, G)
-        // // subgradient when X_ij is zero. set as close to zero as possible
-        // subgrad_h2 = -1 * LambdaMat.array() * grad_h1.array().sign() * (grad_h1.array().abs()/LambdaMat.array()).min(1);
-        // // subgradient when X_ij is not zero. set lambda1 * sign(X)
-        // for (int k=0; k<X.outerSize(); ++k) {
-        //     for (SparseMatrix<double>::InnerIterator it(X, k); it; ++it) {
-        //         subgrad_h2(it.row(), it.col()) = LambdaMat(it.row(), it.col()) * sgn(it.value());
-        //     }
-        // }
-
-        subg = grad_h1 + subgrad_h2;
-        // delta_subg = subg.norm()/Xn.norm();
         delta_updates = Step.norm();
         hn = h1n + Xn.cwiseAbs().cwiseProduct(LambdaMat).sum();
 
-        hist_inner_itr_count(outer_itr_count) = inner_itr_count;
-        // hist_delta_subg(outer_itr_count) = delta_subg;
-        hist_delta_updates(outer_itr_count) = delta_updates;
-        hist_hn(outer_itr_count) = hn;
+        hist_delta_updates(itr_count) = delta_updates;
+        hist_hn(itr_count) = hn;
 
-        if (delta_updates < epstol || outer_itr_count > maxitr) {
-            
-            if (outer_itr_count < maxitr) {
-                hist_inner_itr_count(outer_itr_count+1) = -1;
-                // hist_delta_subg(outer_itr_count+1) = -1;
-                hist_delta_updates(outer_itr_count+1) = -1;
-                hist_hn(outer_itr_count+1) = -1;
+        if (delta_updates < epstol || itr_count > maxitr) {
+            if (itr_count < maxitr) {
+                hist_delta_updates(itr_count+1) = -1;
+                hist_hn(itr_count+1) = -1;
             }
-
             break;
         } else {
             h1 = h1n;
@@ -397,12 +353,10 @@ SparseMatrix<double> cce_constant(
             W = Wn;
         }
 
-        outer_itr_count += 1;
+        itr_count += 1;
 
     }
     return Xn;
-
-    // return X;
 }
 
 // int add(int i, int j) {

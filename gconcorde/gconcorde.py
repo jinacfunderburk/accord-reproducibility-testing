@@ -46,16 +46,17 @@ def cce_constant(S, lambda1, epstol=1e-5, maxitr=100, penalize_diagonal=False):
     if not penalize_diagonal:
         np.fill_diagonal(lambda1, 0)
 
-    hist_inner_itr_count = np.full((maxitr, 1), -1, order="F", dtype='int32')
+    # hist_inner_itr_count = np.full((maxitr, 1), -1, order="F", dtype='int32')
     hist_delta_updates = np.full((maxitr, 1), -1, order="F", dtype='float64')
     hist_hn = np.full((maxitr, 1), -1, order="F", dtype='float64')
 
     tau = 1/power_method(S)
 
     # return _cc.ccista(S, lambda1, lambda2, epstol, maxitr, steptype)
-    Xn = _cce.cce_constant(S, lambda1, epstol, maxitr, tau, hist_inner_itr_count, hist_delta_updates, hist_hn)
+    Xn = _cce.cce_constant(S, lambda1, epstol, maxitr, tau, penalize_diagonal, hist_delta_updates, hist_hn)
 
-    hist = np.hstack([hist_inner_itr_count, hist_delta_updates, hist_hn])
+    # hist = np.hstack([hist_inner_itr_count, hist_delta_updates, hist_hn])
+    hist = np.hstack([hist_delta_updates, hist_hn])
     hist = hist[np.where(hist[:,0]!=-1)]
 
     return Xn, hist
@@ -193,13 +194,11 @@ def pycce_constant(S, lambda1, epstol=1e-5, maxitr=100, penalize_diagonal=False)
     tau = 1/power_method(S)
 
     run_info = []
-    itr_count = 0
     while True:
         G = grad_h1(X, S, constant=True)
         step = X - tau*G
 
         if penalize_diagonal:
-            # this gives omega with all 0's
             y = np.diag(step) - np.diag(tau*lambda1)
             Xn = soft_threshold(step, tau*lambda1)
             np.fill_diagonal(Xn, 0.5*(y+np.sqrt(y**2 + 4*tau)))
@@ -208,12 +207,10 @@ def pycce_constant(S, lambda1, epstol=1e-5, maxitr=100, penalize_diagonal=False)
             Xn = soft_threshold(step, tau*lambda1)
             np.fill_diagonal(Xn, 0.5*(y+np.sqrt(y**2 + 4*tau)))
 
-        itr_count += 1
-
         Xnorm = np.linalg.norm(Xn-X)
         h = h1(Xn, S, constant=True) + h2(Xn, lambda1, constant=True)
 
-        itr_info = [[itr_count, Xnorm, h]]
+        itr_info = [[Xnorm, h]]
         run_info += itr_info
 
         if Xnorm < epstol or len(run_info) > maxitr:

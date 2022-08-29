@@ -35,7 +35,6 @@ namespace py = pybind11;
 // Eigen::SparseMatrix<float> ccista(Eigen::Ref<Eigen::MatrixXf> S);
 // Eigen::SparseMatrix<double> ccista(
 Eigen::SparseMatrix<double> ccista(
-//void ccista(
     Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> S,
     Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> LambdaMat,
     double epstol,
@@ -46,7 +45,6 @@ Eigen::SparseMatrix<double> ccista(
     );
 
 Eigen::SparseMatrix<double> cceista(
-//void ccista(
     Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> S,
     Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> LambdaMat,
     double epstol,
@@ -57,13 +55,12 @@ Eigen::SparseMatrix<double> cceista(
     );
 
 Eigen::SparseMatrix<double> cce_constant(
-//void ccista(
     Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> S,
     Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> LambdaMat,
     double epstol,
     int maxitr,
     double tau,
-    Eigen::Ref<Eigen::VectorXi> hist_inner_itr_count,
+    bool penalize_diagonal,
     Eigen::Ref<Eigen::VectorXd> hist_delta_updates,
     Eigen::Ref<Eigen::VectorXd> hist_hn
     );
