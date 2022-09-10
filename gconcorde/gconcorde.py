@@ -4,13 +4,13 @@ import numpy as np
 def check_symmetry(a, rtol=1e-05, atol=1e-08):
     return np.allclose(a, a.T, rtol=rtol, atol=atol)
 
-def cceista(S, lambda1, epstol=1e-5, maxitr=100, penalize_diagonal=False):
+def cceista(S, lambda1, Omega_star, epstol=1e-5, maxitr=100, penalize_diagonal=False):
 
     assert type(S) == np.ndarray and S.dtype == "float64"
 
     # assert type(lambda1) == 'float' or (type(data) == np.ndarray and data.shape == lambda1.shape)
 
-    if type(lambda1) == float:
+    if (type(lambda1) == float) | (type(lambda1) == np.float64):
         lambda1 = np.full_like(S, lambda1, order="F", dtype="float64")
     
     assert type(lambda1) == np.ndarray and lambda1.dtype == "float64"
@@ -22,22 +22,24 @@ def cceista(S, lambda1, epstol=1e-5, maxitr=100, penalize_diagonal=False):
     hist_inner_itr_count = np.full((maxitr, 1), -1, order="F", dtype='int32')
     hist_delta_updates = np.full((maxitr, 1), -1, order="F", dtype='float64')
     hist_hn = np.full((maxitr, 1), -1, order="F", dtype='float64')
+    hist_norm = np.full((maxitr, 1), -1, order="F", dtype='float64')
+    hist_iter_time = np.full((maxitr, 1), -1, order="F", dtype='float64')
 
     # return _cc.ccista(S, lambda1, lambda2, epstol, maxitr, steptype)
-    Xn = _cce.cceista(S, lambda1, epstol, maxitr, hist_inner_itr_count, hist_delta_updates, hist_hn)
+    Xn = _cce.cceista(S, lambda1, Omega_star, epstol, maxitr, hist_inner_itr_count, hist_delta_updates, hist_hn, hist_norm, hist_iter_time)
 
-    hist = np.hstack([hist_inner_itr_count, hist_delta_updates, hist_hn])
+    hist = np.hstack([hist_inner_itr_count, hist_delta_updates, hist_hn, hist_norm, hist_iter_time])
     hist = hist[np.where(hist[:,0]!=-1)]
 
     return Xn, hist
 
-def cce_constant(S, lambda1, epstol=1e-5, maxitr=100, penalize_diagonal=False):
+def cce_constant(S, lambda1, Omega_star, epstol=1e-5, maxitr=100, penalize_diagonal=False):
 
     assert type(S) == np.ndarray and S.dtype == "float64"
 
     # assert type(lambda1) == 'float' or (type(data) == np.ndarray and data.shape == lambda1.shape)
 
-    if type(lambda1) == float:
+    if (type(lambda1) == float) | (type(lambda1) == np.float64):
         lambda1 = np.full_like(S, lambda1, order="F", dtype="float64")
     
     assert type(lambda1) == np.ndarray and lambda1.dtype == "float64"
@@ -49,14 +51,17 @@ def cce_constant(S, lambda1, epstol=1e-5, maxitr=100, penalize_diagonal=False):
     # hist_inner_itr_count = np.full((maxitr, 1), -1, order="F", dtype='int32')
     hist_delta_updates = np.full((maxitr, 1), -1, order="F", dtype='float64')
     hist_hn = np.full((maxitr, 1), -1, order="F", dtype='float64')
+    hist_norm = np.full((maxitr, 1), -1, order="F", dtype='float64')
+    hist_iter_time = np.full((maxitr, 1), -1, order="F", dtype='float64')
 
-    tau = 1/power_method(S)
+    # tau = 1/power_method(S)
+    tau = 1/np.linalg.svd(S)[1][0]
 
     # return _cc.ccista(S, lambda1, lambda2, epstol, maxitr, steptype)
-    Xn = _cce.cce_constant(S, lambda1, epstol, maxitr, tau, penalize_diagonal, hist_delta_updates, hist_hn)
+    Xn = _cce.cce_constant(S, lambda1, Omega_star, epstol, maxitr, tau, penalize_diagonal, hist_delta_updates, hist_hn, hist_norm, hist_iter_time)
 
     # hist = np.hstack([hist_inner_itr_count, hist_delta_updates, hist_hn])
-    hist = np.hstack([hist_delta_updates, hist_hn])
+    hist = np.hstack([hist_delta_updates, hist_hn, hist_norm, hist_iter_time])
     hist = hist[np.where(hist[:,0]!=-1)]
 
     return Xn, hist

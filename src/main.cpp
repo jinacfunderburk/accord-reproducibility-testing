@@ -47,22 +47,28 @@ Eigen::SparseMatrix<double> ccista(
 Eigen::SparseMatrix<double> cceista(
     Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> S,
     Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> LambdaMat,
+    Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> Omega_star,
     double epstol,
     int maxitr,
     Eigen::Ref<Eigen::VectorXi> hist_inner_itr_count,
     Eigen::Ref<Eigen::VectorXd> hist_delta_updates,
-    Eigen::Ref<Eigen::VectorXd> hist_hn
+    Eigen::Ref<Eigen::VectorXd> hist_hn,
+    Eigen::Ref<Eigen::VectorXd> hist_norm,
+    Eigen::Ref<Eigen::VectorXd> hist_iter_time
     );
 
 Eigen::SparseMatrix<double> cce_constant(
     Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> S,
     Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> LambdaMat,
+    Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> Omega_star,
     double epstol,
     int maxitr,
     double tau,
     bool penalize_diagonal,
     Eigen::Ref<Eigen::VectorXd> hist_delta_updates,
-    Eigen::Ref<Eigen::VectorXd> hist_hn
+    Eigen::Ref<Eigen::VectorXd> hist_hn,
+    Eigen::Ref<Eigen::VectorXd> hist_norm,
+    Eigen::Ref<Eigen::VectorXd> hist_iter_time
     );
 // Eigen::SparseMatrix<double> ccista(
 //     Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> S,

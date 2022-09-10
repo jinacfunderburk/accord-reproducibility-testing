@@ -166,11 +166,14 @@ SparseMatrix<double> cceista(
 // void ccista(
     Ref<MatrixXd, 0, Stride<Dynamic, Dynamic>> S, 
     Ref<MatrixXd, 0, Stride<Dynamic, Dynamic>> LambdaMat,
+    Ref<MatrixXd, 0, Stride<Dynamic, Dynamic>> Omega_star,
     double epstol,
     int maxitr,
     Ref<VectorXi> hist_inner_itr_count,
     Ref<VectorXd> hist_delta_updates,
-    Ref<VectorXd> hist_hn
+    Ref<VectorXd> hist_hn,
+    Ref<VectorXd> hist_norm,
+    Ref<VectorXd> hist_iter_time
     ) {
 
     int p = S.cols();
@@ -204,6 +207,8 @@ SparseMatrix<double> cceista(
 
     outer_itr_count = 0;
     while (true) {
+
+        clock_t start = clock();
  
         tau = tau_;
 
@@ -236,6 +241,10 @@ SparseMatrix<double> cceista(
 
         }
 
+        clock_t end = clock();
+        double elapsed = double(end - start)/CLOCKS_PER_SEC;
+        double fro_norm = (MatrixXd(Xn)-Omega_star).norm();
+
         grad_h1 = -1*Xn.diagonal().asDiagonal().inverse();
         grad_h1 += Wn;
 
@@ -258,6 +267,8 @@ SparseMatrix<double> cceista(
         // hist_delta_subg(outer_itr_count) = delta_subg;
         hist_delta_updates(outer_itr_count) = delta_updates;
         hist_hn(outer_itr_count) = hn;
+        hist_norm(outer_itr_count) = fro_norm;
+        hist_iter_time(outer_itr_count) = elapsed;
 
         if (delta_updates < epstol || outer_itr_count > maxitr) {
             
@@ -266,6 +277,8 @@ SparseMatrix<double> cceista(
                 // hist_delta_subg(outer_itr_count+1) = -1;
                 hist_delta_updates(outer_itr_count+1) = -1;
                 hist_hn(outer_itr_count+1) = -1;
+                hist_norm(outer_itr_count+1) = -1;
+                hist_iter_time(outer_itr_count+1) = -1;
             }
 
             break;
@@ -284,12 +297,15 @@ SparseMatrix<double> cceista(
 SparseMatrix<double> cce_constant(
     Ref<MatrixXd, 0, Stride<Dynamic, Dynamic>> S, 
     Ref<MatrixXd, 0, Stride<Dynamic, Dynamic>> LambdaMat,
+    Ref<MatrixXd, 0, Stride<Dynamic, Dynamic>> Omega_star,
     double epstol,
     int maxitr,
     double tau,
     bool penalize_diagonal,
     Ref<VectorXd> hist_delta_updates,
-    Ref<VectorXd> hist_hn
+    Ref<VectorXd> hist_hn,
+    Ref<VectorXd> hist_norm,
+    Ref<VectorXd> hist_iter_time
     ) {
 
     int p = S.cols();
@@ -313,6 +329,8 @@ SparseMatrix<double> cce_constant(
     itr_count = 0;
     while (true) {
         
+        clock_t start = clock();
+
         tmp = MatrixXd(X) - tau*grad_h1;
 
         if (penalize_diagonal == true) {
@@ -328,8 +346,11 @@ SparseMatrix<double> cce_constant(
             tmp.diagonal() = y;
             Xn = tmp.sparseView();
         }
-       
 
+        clock_t end = clock();
+        double elapsed = double(end - start)/CLOCKS_PER_SEC;
+        double fro_norm = (MatrixXd(Xn)-Omega_star).norm();
+       
         Wn = Xn * S;
         Step = Xn - X;
         h1n = - Xn.diagonal().array().log().sum() + 0.5 * (SparseMatrix<double>(Xn.transpose())*Wn).trace();
@@ -340,11 +361,15 @@ SparseMatrix<double> cce_constant(
 
         hist_delta_updates(itr_count) = delta_updates;
         hist_hn(itr_count) = hn;
+        hist_norm(itr_count) = fro_norm;
+        hist_iter_time(itr_count) = elapsed;
 
         if (delta_updates < epstol || itr_count > maxitr) {
             if (itr_count < maxitr) {
                 hist_delta_updates(itr_count+1) = -1;
                 hist_hn(itr_count+1) = -1;
+                hist_norm(itr_count+1) = -1;
+                hist_iter_time(itr_count+1) = -1;
             }
             break;
         } else {
