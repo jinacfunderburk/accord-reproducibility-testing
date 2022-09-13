@@ -33,9 +33,9 @@ def cceista(S, lambda1, Omega_star, epstol=1e-5, maxitr=100, penalize_diagonal=F
 
     return Xn, hist
 
-def cce_constant(S, lambda1, Omega_star, epstol=1e-5, maxitr=100, penalize_diagonal=False):
+def cce_constant(S, lambda1, Cov, Omega_star, epstol=1e-5, maxitr=100, penalize_diagonal=False):
 
-    assert type(S) == np.ndarray and S.dtype == "float64"
+    assert (type(S) == np.ndarray and S.dtype == "float64")
 
     # assert type(lambda1) == 'float' or (type(data) == np.ndarray and data.shape == lambda1.shape)
 
@@ -55,7 +55,8 @@ def cce_constant(S, lambda1, Omega_star, epstol=1e-5, maxitr=100, penalize_diago
     hist_iter_time = np.full((maxitr, 1), -1, order="F", dtype='float64')
 
     # tau = 1/power_method(S)
-    tau = 1/np.linalg.svd(S)[1][0]
+    # tau = 1/np.linalg.svd(S)[1][0]
+    tau = 1/np.linalg.svd(Cov)[1][0]
 
     # return _cc.ccista(S, lambda1, lambda2, epstol, maxitr, steptype)
     Xn = _cce.cce_constant(S, lambda1, Omega_star, epstol, maxitr, tau, penalize_diagonal, hist_delta_updates, hist_hn, hist_norm, hist_iter_time)
@@ -131,7 +132,7 @@ def subgrad(S, X, lambda1):
 
     return g_h1 + subg_h2
 
-def pycceista(S, lambda1, epstol=1e-5, maxitr=100, penalize_diagonal=False):
+def pycceista(S, lambda1, Omega_star, epstol=1e-5, maxitr=100, penalize_diagonal=False):
 
     assert check_symmetry(S)
     p, _ = S.shape
@@ -163,9 +164,10 @@ def pycceista(S, lambda1, epstol=1e-5, maxitr=100, penalize_diagonal=False):
         # subg = subgrad(S, Xn, lambda1)
         # delta_subg = np.linalg.norm(subg)/np.linalg.norm(Xn)
         Xnorm = np.linalg.norm(Xn-X)
+        hist_norm = np.linalg.norm(Omega_star - Xn)
         hn = h1(Xn, S) + h2(Xn, lambda1)
 
-        itr_info = [[inner_itr_count, Xnorm, hn]]
+        itr_info = [[inner_itr_count, Xnorm, hn, hist_norm]]
         run_info += itr_info
 
         if Xnorm < epstol or len(run_info) > maxitr:
@@ -185,7 +187,7 @@ def power_method(S, n=100):
         
     return eigenvalue
 
-def pycce_constant(S, lambda1, epstol=1e-5, maxitr=100, penalize_diagonal=False):
+def pycce_constant(S, lambda1, Cov, Omega_star, epstol=1e-5, maxitr=100, penalize_diagonal=False):
 
     assert check_symmetry(S)
     p, _ = S.shape
@@ -196,7 +198,9 @@ def pycce_constant(S, lambda1, epstol=1e-5, maxitr=100, penalize_diagonal=False)
     assert check_symmetry(lambda1)
 
     X = np.identity(p)
-    tau = 1/power_method(S)
+    # tau = 1/power_method(S)
+    tau = 1/power_method(Cov)
+    # tau = 1/np.linalg.svd(S)[1][0]
 
     run_info = []
     while True:
@@ -213,9 +217,10 @@ def pycce_constant(S, lambda1, epstol=1e-5, maxitr=100, penalize_diagonal=False)
             np.fill_diagonal(Xn, 0.5*(y+np.sqrt(y**2 + 4*tau)))
 
         Xnorm = np.linalg.norm(Xn-X)
+        hist_norm = np.linalg.norm(Omega_star - Xn)
         h = h1(Xn, S, constant=True) + h2(Xn, lambda1, constant=True)
 
-        itr_info = [[Xnorm, h]]
+        itr_info = [[Xnorm, h, hist_norm]]
         run_info += itr_info
 
         if Xnorm < epstol or len(run_info) > maxitr:

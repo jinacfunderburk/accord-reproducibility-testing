@@ -260,7 +260,7 @@ SparseMatrix<double> cceista(
 
         subg = grad_h1 + subgrad_h2;
         // delta_subg = subg.norm()/Xn.norm();
-        delta_updates = Step.norm();
+        delta_updates = (Xn-X).norm();
         hn = h1n + Xn.cwiseAbs().cwiseProduct(LambdaMat).sum();
 
         hist_inner_itr_count(outer_itr_count) = inner_itr_count;
