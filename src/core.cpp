@@ -5,9 +5,11 @@
 #include <Eigen/Core>
 #include <Eigen/SparseCore>
 #include <Eigen/LU>
+#include <chrono>
 
 using namespace Eigen;
 using namespace std;
+using namespace std::chrono;
 
 double sgn(double val) {
     return (double(0) < val) - (val < double(0));
@@ -196,6 +198,7 @@ SparseMatrix<double> cceista(
     double Q, hn, h1, h1n, delta_updates;
     double tau, tau_ = 1.0;
     double c_ = 0.5;
+    double elapsed;
 
     X.setIdentity();            // initial guess: X = I
     W = X * S;
@@ -208,7 +211,7 @@ SparseMatrix<double> cceista(
     outer_itr_count = 0;
     while (true) {
 
-        clock_t start = clock();
+        high_resolution_clock::time_point t1 = high_resolution_clock::now();
  
         tau = tau_;
 
@@ -241,9 +244,9 @@ SparseMatrix<double> cceista(
 
         }
 
-        clock_t end = clock();
-        double elapsed = double(end - start)/CLOCKS_PER_SEC;
-        double fro_norm = (MatrixXd(Xn)-Omega_star).norm();
+        high_resolution_clock::time_point t2 = high_resolution_clock::now();
+        duration<double> time_span = duration_cast<duration<double>>(t2 - t1);
+        double elapsed = time_span.count();
 
         grad_h1 = -1*Xn.diagonal().asDiagonal().inverse();
         grad_h1 += Wn;
@@ -267,7 +270,7 @@ SparseMatrix<double> cceista(
         // hist_delta_subg(outer_itr_count) = delta_subg;
         hist_delta_updates(outer_itr_count) = delta_updates;
         hist_hn(outer_itr_count) = hn;
-        hist_norm(outer_itr_count) = fro_norm;
+        hist_norm(outer_itr_count) = (Xn-Omega_star).norm();
         hist_iter_time(outer_itr_count) = elapsed;
 
         if (delta_updates < epstol || outer_itr_count > maxitr) {
@@ -318,18 +321,18 @@ SparseMatrix<double> cce_constant(
     MatrixXd tmp(p, p);
     ArrayXd y(p);
 
-    double hn, h1, h1n, delta_updates;
+    double hn, delta_updates;
+    double elapsed;
 
     X.setIdentity();            // initial guess: X = I
     grad_h1 = X * S;
-    h1 = - X.diagonal().array().log().sum() + 0.5 * (SparseMatrix<double>(X.transpose())*W).trace();
 
     int itr_count;        // iteration counts
 
     itr_count = 0;
     while (true) {
-        
-        clock_t start = clock();
+
+        high_resolution_clock::time_point t1 = high_resolution_clock::now();
 
         tmp = MatrixXd(X) - tau*grad_h1;
 
@@ -346,22 +349,20 @@ SparseMatrix<double> cce_constant(
             tmp.diagonal() = y;
             Xn = tmp.sparseView();
         }
-
-        clock_t end = clock();
-        double elapsed = double(end - start)/CLOCKS_PER_SEC;
-        double fro_norm = (MatrixXd(Xn)-Omega_star).norm();
+        
+        high_resolution_clock::time_point t2 = high_resolution_clock::now();
+        duration<double> time_span = duration_cast<duration<double>>(t2 - t1);
+        double elapsed = time_span.count();
        
         Wn = Xn * S;
-        Step = Xn - X;
-        h1n = - Xn.diagonal().array().log().sum() + 0.5 * (SparseMatrix<double>(Xn.transpose())*Wn).trace();
         grad_h1 = Wn;
 
-        delta_updates = Step.norm();
-        hn = h1n + Xn.cwiseAbs().cwiseProduct(LambdaMat).sum();
+        delta_updates = (Xn-X).norm();
+        hn = - Xn.diagonal().array().log().sum() + 0.5 * (SparseMatrix<double>(Xn.transpose())*Wn).trace() + Xn.cwiseAbs().cwiseProduct(LambdaMat).sum();
 
         hist_delta_updates(itr_count) = delta_updates;
         hist_hn(itr_count) = hn;
-        hist_norm(itr_count) = fro_norm;
+        hist_norm(itr_count) = (Xn-Omega_star).norm();
         hist_iter_time(itr_count) = elapsed;
 
         if (delta_updates < epstol || itr_count > maxitr) {
@@ -373,7 +374,6 @@ SparseMatrix<double> cce_constant(
             }
             break;
         } else {
-            h1 = h1n;
             X = Xn;
             W = Wn;
         }

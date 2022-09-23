@@ -1,5 +1,7 @@
 import _gconcorde as _cce
 import numpy as np
+import scipy
+import time
 
 def check_symmetry(a, rtol=1e-05, atol=1e-08):
     return np.allclose(a, a.T, rtol=rtol, atol=atol)
@@ -33,7 +35,7 @@ def cceista(S, lambda1, Omega_star, epstol=1e-5, maxitr=100, penalize_diagonal=F
 
     return Xn, hist
 
-def cce_constant(S, lambda1, Cov, Omega_star, epstol=1e-5, maxitr=100, penalize_diagonal=False):
+def cce_constant(S, Cov, lambda1, use_true_cov, stepsize_multiplier, Omega_star, epstol=1e-5, maxitr=100, penalize_diagonal=False):
 
     assert (type(S) == np.ndarray and S.dtype == "float64")
 
@@ -55,8 +57,10 @@ def cce_constant(S, lambda1, Cov, Omega_star, epstol=1e-5, maxitr=100, penalize_
     hist_iter_time = np.full((maxitr, 1), -1, order="F", dtype='float64')
 
     # tau = 1/power_method(S)
-    # tau = 1/np.linalg.svd(S)[1][0]
-    tau = 1/np.linalg.svd(Cov)[1][0]
+    if use_true_cov:
+        tau = (stepsize_multiplier*1) / scipy.linalg.svd(Cov)[1][0]
+    else:
+        tau = (stepsize_multiplier*1) / scipy.linalg.svd(S)[1][0]
 
     # return _cc.ccista(S, lambda1, lambda2, epstol, maxitr, steptype)
     Xn = _cce.cce_constant(S, lambda1, Omega_star, epstol, maxitr, tau, penalize_diagonal, hist_delta_updates, hist_hn, hist_norm, hist_iter_time)
@@ -137,7 +141,7 @@ def pycceista(S, lambda1, Omega_star, epstol=1e-5, maxitr=100, penalize_diagonal
     assert check_symmetry(S)
     p, _ = S.shape
 
-    if type(lambda1) == float:
+    if (type(lambda1) == float) | (type(lambda1) == np.float64):
         lambda1 = lambda1mat(lambda1, p, penalize_diagonal)
 
     assert check_symmetry(lambda1)
@@ -147,6 +151,9 @@ def pycceista(S, lambda1, Omega_star, epstol=1e-5, maxitr=100, penalize_diagonal
 
     run_info = []
     while True:
+
+        start_time = time.time()
+
         tau = 1.0
         c = 0.5
 
@@ -160,6 +167,8 @@ def pycceista(S, lambda1, Omega_star, epstol=1e-5, maxitr=100, penalize_diagonal
             else:
                 tau = c*tau
                 inner_itr_count += 1
+
+        elapsed = time.time() - start_time
         
         # subg = subgrad(S, Xn, lambda1)
         # delta_subg = np.linalg.norm(subg)/np.linalg.norm(Xn)
@@ -167,7 +176,7 @@ def pycceista(S, lambda1, Omega_star, epstol=1e-5, maxitr=100, penalize_diagonal
         hist_norm = np.linalg.norm(Omega_star - Xn)
         hn = h1(Xn, S) + h2(Xn, lambda1)
 
-        itr_info = [[inner_itr_count, Xnorm, hn, hist_norm]]
+        itr_info = [[inner_itr_count, Xnorm, hn, hist_norm, elapsed]]
         run_info += itr_info
 
         if Xnorm < epstol or len(run_info) > maxitr:
@@ -187,23 +196,33 @@ def power_method(S, n=100):
         
     return eigenvalue
 
-def pycce_constant(S, lambda1, Cov, Omega_star, epstol=1e-5, maxitr=100, penalize_diagonal=False):
+def pycce_constant(S, Cov, lambda1, use_true_cov, stepsize_multiplier, Omega_star, epstol=1e-5, maxitr=100, penalize_diagonal=False):
 
     assert check_symmetry(S)
     p, _ = S.shape
 
-    if type(lambda1) == float:
+    if (type(lambda1) == float) | (type(lambda1) == np.float64) | (type(lambda1) == np.float128):
         lambda1 = lambda1mat(lambda1, p, penalize_diagonal)
 
     assert check_symmetry(lambda1)
 
     X = np.identity(p)
-    # tau = 1/power_method(S)
-    tau = 1/power_method(Cov)
-    # tau = 1/np.linalg.svd(S)[1][0]
+    # random initialization
+    # np.random.seed(2022)
+    # X = np.random.normal(0, 1, (p,p))
+
+    if use_true_cov:
+        tau = (stepsize_multiplier*1) / scipy.linalg.svd(Cov)[1][0]
+    else:
+        tau = (stepsize_multiplier*1) / scipy.linalg.svd(S)[1][0]
+    # tau = 1/np.linalg.svd(S)[1][0] (doesn't work with np.float128)
+    
 
     run_info = []
     while True:
+
+        start_time = time.time()
+
         G = grad_h1(X, S, constant=True)
         step = X - tau*G
 
@@ -216,11 +235,12 @@ def pycce_constant(S, lambda1, Cov, Omega_star, epstol=1e-5, maxitr=100, penaliz
             Xn = soft_threshold(step, tau*lambda1)
             np.fill_diagonal(Xn, 0.5*(y+np.sqrt(y**2 + 4*tau)))
 
+        elapsed = time.time() - start_time
         Xnorm = np.linalg.norm(Xn-X)
         hist_norm = np.linalg.norm(Omega_star - Xn)
         h = h1(Xn, S, constant=True) + h2(Xn, lambda1, constant=True)
 
-        itr_info = [[Xnorm, h, hist_norm]]
+        itr_info = [[Xnorm, h, hist_norm, elapsed]]
         run_info += itr_info
 
         if Xnorm < epstol or len(run_info) > maxitr:
