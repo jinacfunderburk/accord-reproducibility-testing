@@ -195,7 +195,7 @@ SparseMatrix<double> cceista(
     MatrixXd subgrad_h2(p, p);              // subgradient of h2
     MatrixXd tmp(p, p);
 
-    double Q, hn, h1, h1n, delta_updates;
+    double Q, hn, h1, h1n, delta_updates, norm_updates;
     double tau, tau_ = 1.0;
     double c_ = 0.5;
     double elapsed;
@@ -214,8 +214,14 @@ SparseMatrix<double> cceista(
         high_resolution_clock::time_point t1 = high_resolution_clock::now();
  
         tau = tau_;
+        // tau = 0.125;
 
         inner_itr_count = 0;
+
+        // tmp = MatrixXd(X) - tau*grad_h1;
+        // sthreshmat(tmp, tau, LambdaMat);
+        // Xn = tmp.sparseView();
+
         while (true) {
 
             tmp = MatrixXd(X) - tau*grad_h1;
@@ -227,7 +233,6 @@ SparseMatrix<double> cceista(
                 Step = Xn - X;
                 Wn = Xn * S;
 
-                // h1n = - Xn.diagonal().array().log().sum() + 0.5 * (SparseMatrix<double>(Xn.transpose()).cwiseProduct(Wn).sum());
                 h1n = - Xn.diagonal().array().log().sum() + 0.5 * (SparseMatrix<double>(Xn.transpose())*Wn).trace();
                 Q = h1 + Step.cwiseProduct(grad_h1).sum() + (0.5/tau)*Step.squaredNorm();
 
@@ -263,25 +268,25 @@ SparseMatrix<double> cceista(
 
         subg = grad_h1 + subgrad_h2;
         // delta_subg = subg.norm()/Xn.norm();
-        delta_updates = (Xn-X).norm();
+        delta_updates = Step.norm();
+        norm_updates = (Xn - Omega_star).norm();
         hn = h1n + Xn.cwiseAbs().cwiseProduct(LambdaMat).sum();
 
         hist_inner_itr_count(outer_itr_count) = inner_itr_count;
         // hist_delta_subg(outer_itr_count) = delta_subg;
         hist_delta_updates(outer_itr_count) = delta_updates;
         hist_hn(outer_itr_count) = hn;
-        hist_norm(outer_itr_count) = (Xn-Omega_star).norm();
+        hist_norm(outer_itr_count) = norm_updates;
         hist_iter_time(outer_itr_count) = elapsed;
 
         if (delta_updates < epstol || outer_itr_count > maxitr) {
-            
             if (outer_itr_count < maxitr) {
                 hist_inner_itr_count(outer_itr_count+1) = -1;
                 // hist_delta_subg(outer_itr_count+1) = -1;
                 hist_delta_updates(outer_itr_count+1) = -1;
                 hist_hn(outer_itr_count+1) = -1;
                 hist_norm(outer_itr_count+1) = -1;
-                hist_iter_time(outer_itr_count+1) = -1;
+                // hist_iter_time(outer_itr_count+1) = -1;
             }
 
             break;
@@ -315,13 +320,13 @@ SparseMatrix<double> cce_constant(
 
     SparseMatrix<double> X(p, p), Xn(p, p); // current and next estimate
     SparseMatrix<double> Step(p, p);        // Xn - X
-    MatrixXd W(p, p), Wn(p, p);             // X*S
+    MatrixXd W(p, p), Wn(p, p);            // X*S
 
     MatrixXd grad_h1(p, p);                 // gradient of h1
     MatrixXd tmp(p, p);
     ArrayXd y(p);
 
-    double hn, delta_updates;
+    double hn, delta_updates, norm_updates;
     double elapsed;
 
     X.setIdentity();            // initial guess: X = I
@@ -357,12 +362,13 @@ SparseMatrix<double> cce_constant(
         Wn = Xn * S;
         grad_h1 = Wn;
 
-        delta_updates = (Xn-X).norm();
+        delta_updates = (Xn - X).norm();
+        norm_updates = (Xn - Omega_star).norm();
         hn = - Xn.diagonal().array().log().sum() + 0.5 * (SparseMatrix<double>(Xn.transpose())*Wn).trace() + Xn.cwiseAbs().cwiseProduct(LambdaMat).sum();
 
         hist_delta_updates(itr_count) = delta_updates;
         hist_hn(itr_count) = hn;
-        hist_norm(itr_count) = (Xn-Omega_star).norm();
+        hist_norm(itr_count) = norm_updates;
         hist_iter_time(itr_count) = elapsed;
 
         if (delta_updates < epstol || itr_count > maxitr) {

@@ -101,7 +101,7 @@ def quadratic_approx(mat_next, mat, S, tau):
 
 def lambda1mat(lambda1, p, penalize_diagonal):
 
-    mat = lambda1 * np.ones((p, p), dtype="float64")
+    mat = lambda1 * np.ones((p, p), dtype=np.float64)
 
     if penalize_diagonal is False:
         np.fill_diagonal(mat, 0)
@@ -136,37 +136,42 @@ def subgrad(S, X, lambda1):
 
     return g_h1 + subg_h2
 
-def pycceista(S, lambda1, Omega_star, epstol=1e-5, maxitr=100, penalize_diagonal=False):
+def pycceista(S, lambda1, Omega_star, Omega_curr, quad_approx=True, epstol=1e-5, maxitr=100, penalize_diagonal=False):
 
     assert check_symmetry(S)
     p, _ = S.shape
 
-    if (type(lambda1) == float) | (type(lambda1) == np.float64):
+    if (type(lambda1) == float) | (type(lambda1) == np.float64) | (type(lambda1) == np.float128):
         lambda1 = lambda1mat(lambda1, p, penalize_diagonal)
 
     assert check_symmetry(lambda1)
 
-    X = np.identity(p)
-    G = grad_h1(X, S)
+    # X = np.identity(p, dtype=np.float128)
+    X = Omega_curr
 
     run_info = []
+    i = 0
     while True:
-
         start_time = time.time()
 
+        G = grad_h1(X, S)
         tau = 1.0
         c = 0.5
 
         inner_itr_count = 0
-        while True:
+        if quad_approx:
+            while True:
 
+                Xn = soft_threshold(X - tau*G, tau*lambda1)
+
+                if np.all(Xn.diagonal() > 0) and (h1(Xn, S) <= quadratic_approx(Xn, X, S, tau)):
+                    break
+                else:
+                    tau = c*tau
+                    inner_itr_count += 1
+        else:
+            tau = 0.76
             Xn = soft_threshold(X - tau*G, tau*lambda1)
-
-            if np.all(Xn.diagonal() > 0) and (h1(Xn, S) <= quadratic_approx(Xn, X, S, tau)):
-                break
-            else:
-                tau = c*tau
-                inner_itr_count += 1
 
         elapsed = time.time() - start_time
         
@@ -174,16 +179,17 @@ def pycceista(S, lambda1, Omega_star, epstol=1e-5, maxitr=100, penalize_diagonal
         # delta_subg = np.linalg.norm(subg)/np.linalg.norm(Xn)
         Xnorm = np.linalg.norm(Xn-X)
         hist_norm = np.linalg.norm(Omega_star - Xn)
+        print(i, hist_norm)
         hn = h1(Xn, S) + h2(Xn, lambda1)
 
         itr_info = [[inner_itr_count, Xnorm, hn, hist_norm, elapsed]]
         run_info += itr_info
 
-        if Xnorm < epstol or len(run_info) > maxitr:
+        if hist_norm < epstol or len(run_info) > maxitr:
             break
         else:
             X = Xn
-            G = grad_h1(X, S)
+            i += 1
 
     return Xn, np.array(run_info)
 
@@ -206,10 +212,7 @@ def pycce_constant(S, Cov, lambda1, use_true_cov, stepsize_multiplier, Omega_sta
 
     assert check_symmetry(lambda1)
 
-    X = np.identity(p)
-    # random initialization
-    # np.random.seed(2022)
-    # X = np.random.normal(0, 1, (p,p))
+    X = np.identity(p, dtype=np.float64)
 
     if use_true_cov:
         tau = (stepsize_multiplier*1) / scipy.linalg.svd(Cov)[1][0]
@@ -219,6 +222,7 @@ def pycce_constant(S, Cov, lambda1, use_true_cov, stepsize_multiplier, Omega_sta
     
 
     run_info = []
+    i = 0
     while True:
 
         start_time = time.time()
@@ -236,16 +240,19 @@ def pycce_constant(S, Cov, lambda1, use_true_cov, stepsize_multiplier, Omega_sta
             np.fill_diagonal(Xn, 0.5*(y+np.sqrt(y**2 + 4*tau)))
 
         elapsed = time.time() - start_time
+        
         Xnorm = np.linalg.norm(Xn-X)
         hist_norm = np.linalg.norm(Omega_star - Xn)
+        print(i, hist_norm)
         h = h1(Xn, S, constant=True) + h2(Xn, lambda1, constant=True)
 
         itr_info = [[Xnorm, h, hist_norm, elapsed]]
         run_info += itr_info
 
-        if Xnorm < epstol or len(run_info) > maxitr:
+        if hist_norm < epstol or len(run_info) > maxitr:
             break
         else:
             X = Xn
+            i += 1
 
     return Xn, np.array(run_info)
