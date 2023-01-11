@@ -22,13 +22,13 @@ ext_modules = [
 setup(
     name='gconcorde',
     version=__version__,
-    author='Blake Thompson',
-    author_email='blake@mapbox.com',
-    url='https://github.com/mapbox/python-cpp-skel',
-    description='A skeleton library example using pybind11',
+    author='Sang-Yun Oh',
+    author_email='syoh@ucsb.edu',
+    url='https://github.com/dddlab/gconcorde',
+    description='Implementation of the CONCORDe algorithm',
     long_description='',
     ext_modules=ext_modules,
-    install_requires=['pybind11>=2.2'],
+    install_requires=['pybind11>=2.2'], # needs to be updated
     cmdclass={'build_ext': BuildExt},
     zip_safe=False,
 )
