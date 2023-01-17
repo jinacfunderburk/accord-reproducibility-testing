@@ -1,251 +1,209 @@
 import _gconcorde as _cce
 import numpy as np
-import scipy
 
 def check_symmetry(a, rtol=1e-05, atol=1e-08):
     return np.allclose(a, a.T, rtol=rtol, atol=atol)
 
-def cceista(S, lambda1, epstol=1e-5, maxitr=100, penalize_diagonal=True):
-    '''
-    CONCORDe-ISTA algorithm for precision matrix estimation
-    
-    Parameters
-    ----------
-    S : ndarray of shape (n_features, n_features)
-        Sample covariance matrix
-    lambda1 : float
-        The l1-regularization parameter
-    epstol : float, default=1e-5
-        Convergence threshold
-    maxitr : int, default=100
-        The maximum number of iterations
-    penalize_diagonal : bool, default=True
-        Whether or not to penalize the diagonal elements
-    
-    Returns
-    -------
-    Xn : ndarray of shape (n_features, n_features)
-        Estimated precision matrix
-    hist : ndarray of shape (n_iters, 3)
-        The list of values of (inner_iter_count, successive_norm_diff, objective) at each iteration until convergence
-    '''
+def get_lambda_matrix(lam, S):
+    if isinstance(lam, float) | isinstance(lam, int):
+        lam_mat = np.full_like(S, lam, order='F', dtype='float64')
+    elif isinstance(lam, np.ndarray):
+        lam_mat = lam
+    return lam_mat
 
-    assert type(S) == np.ndarray and S.dtype == 'float64'
-
-    if (type(lambda1) == float) | (type(lambda1) == np.float64):
-        lambda1 = np.full_like(S, lambda1, order='F', dtype='float64')
-    
-    assert type(lambda1) == np.ndarray and lambda1.dtype == 'float64'
-    assert check_symmetry(lambda1)
-
-    if not penalize_diagonal:
-        np.fill_diagonal(lambda1, 0)
-
-    hist_inner_itr_count = np.full((maxitr+1, 1), -1, order='F', dtype='int32')
-    hist_norm_diff = np.full((maxitr+1, 1), -1, order='F', dtype='float64')
-    hist_hn = np.full((maxitr+1, 1), -1, order='F', dtype='float64')
-
-    Xn = _cce.cceista(S, lambda1, epstol, maxitr, hist_inner_itr_count, hist_norm_diff, hist_hn)
-    hist = np.hstack([hist_inner_itr_count, hist_norm_diff, hist_hn])
-    hist = hist[np.where(hist[:,0]!=-1)]
-
-    return Xn, hist
-
-def cce(S, lambda1, epstol=1e-5, maxitr=100, penalize_diagonal=True):
-    '''
+def cce(S, lam=0.1, epstol=1e-5, maxitr=100, penalize_diag=True):
+    """
     CONCORDe algorithm for precision matrix estimation
     
     Parameters
     ----------
     S : ndarray of shape (n_features, n_features)
         Sample covariance matrix
-    lambda1 : float
+    lam : float
         The l1-regularization parameter
     epstol : float, default=1e-5
         Convergence threshold
     maxitr : int, default=100
         The maximum number of iterations
-    penalize_diagonal : bool, default=True
+    penalize_diag : bool, default=True
         Whether or not to penalize the diagonal elements
     
     Returns
     -------
-    Xn : ndarray of shape (n_features, n_features)
+    Omega : ndarray of shape (n_features, n_features)
         Estimated precision matrix
     hist : ndarray of shape (n_iters, 2)
         The list of values of (successive_norm_diff, objective) at each iteration until convergence
-    '''
-
+    """
     assert (type(S) == np.ndarray and S.dtype == 'float64')
 
-    if (type(lambda1) == float) | (type(lambda1) == np.float64):
-        lambda1 = np.full_like(S, lambda1, order='F', dtype='float64')
+    lam_mat = get_lambda_matrix(lam, S)
     
-    assert type(lambda1) == np.ndarray and lambda1.dtype == 'float64'
-    assert check_symmetry(lambda1)
+    assert type(lam_mat) == np.ndarray and lam_mat.dtype == 'float64'
+    assert check_symmetry(lam_mat)
 
-    if not penalize_diagonal:
-        np.fill_diagonal(lambda1, 0)
+    if not penalize_diag:
+        np.fill_diagonal(lam_mat, 0)
 
     hist_norm_diff = np.full((maxitr, 1), -1, order='F', dtype='float64')
     hist_hn = np.full((maxitr, 1), -1, order='F', dtype='float64')
 
     tau = 1/np.linalg.svd(S)[1][0]
 
-    Xn = _cce.cce(S, lambda1, epstol, maxitr, tau, penalize_diagonal, hist_norm_diff, hist_hn)
+    Omega = _cce.cce(S, lam_mat, epstol, maxitr, tau, penalize_diag, hist_norm_diff, hist_hn)
     hist = np.hstack([hist_norm_diff, hist_hn])
     hist = hist[np.where(hist[:,0]!=-1)]
 
-    return Xn, hist
+    return Omega, hist
 
-def h1(X, S, constant=True):
-    if constant:
-        return 0.5*np.matmul(X.T, np.matmul(X, S)).trace()
-    else:
-        return -np.log(X.diagonal()).sum() + 0.5*np.matmul(X.T, np.matmul(X, S)).trace()
-
-def grad_h1(X, S, constant=True):
-
-    if constant:
-        G = np.matmul(X, S)
-    else:
-        W = np.matmul(X, S)
-        G = - np.diag(1/X.diagonal()) + W
-
-    return G
-
-def soft_threshold(mat, lambda1):
-
-    return np.sign(mat)*np.maximum(np.abs(mat) - lambda1, 0)
-
-def quadratic_approx(mat_next, mat, S, tau):
-
-    step = mat_next - mat
-
-    Q = h1(mat, S, constant=False) + np.matmul(step.T, grad_h1(mat, S, constant=False)).trace() + (0.5/tau)*np.linalg.norm(step, "fro")**2
-
-    return Q
-
-def lambda1mat(lambda1, p, penalize_diagonal):
-
-    mat = lambda1 * np.ones((p, p), dtype=np.float64)
-
-    if penalize_diagonal is False:
-        np.fill_diagonal(mat, 0)
+def BIC(X, Omega, modified=False, gamma=0.1):
+    n, p = X.shape
+    Omega_reg = Omega/Omega.diagonal()[None,:]
     
-    return mat
+    RSS = (X @ Omega_reg.T)**2
+    RSS_i = RSS.sum(axis=0)
+    num_nonzero = len(np.flatnonzero(Omega_reg))
+    
+    if modified:
+        BIC = (n*np.log(RSS_i).sum()) + (np.log(n) * num_nonzero) + (4*num_nonzero*gamma*np.log(p))
+    else: 
+        BIC = (n*np.log(RSS_i).sum()) + (np.log(n) * num_nonzero)
+    
+    return BIC
 
-def h2(X, lambda1, constant=True):
-    if constant:
-        return -np.log(X.diagonal()).sum() + (lambda1 * np.abs(X)).sum()
-    else:
-        return (lambda1 * np.abs(X)).sum()
+class GraphicalConcorde:
+    """
+    CONCORDe algorithm for precision matrix estimation
+    
+    Parameters
+    ----------
+    lam : float
+        The l1-regularization parameter
+    epstol : float, default=1e-5
+        Convergence threshold
+    maxitr : int, default=100
+        The maximum number of iterations
+    penalize_diag : bool, default=True
+        Whether or not to penalize the diagonal elements
+    
+    Attributes
+    ----------
+    precision_ : ndarray of shape (n_features, n_features)
+        Estimated precision matrix
+    hist_ : ndarray of shape (n_iters, 2)
+        The list of values of (successive_norm_diff, objective) at each iteration until convergence
+    """
+    def __init__(self, lam=0.1, epstol=1e-5, maxitr=100, penalize_diag=True):
+        self.lam = lam
+        self.epstol = epstol
+        self.maxitr = maxitr
+        self.penalize_diag = penalize_diag
+    
+    def fit(self, X, y=None):
+        """
+        Fit CONCORDe
 
-def subgrad_h2(X, lambda1, g_h1=None):
+        Parameters
+        ----------
+        X : ndarray, shape (n_samples, p_features)
+            Data from which to compute the inverse covariance matrix
+        y : (ignored)
+        """
+        S = np.cov(X, rowvar=False)
 
-    subgrad = np.sign(X)
+        self.precision_, self.hist_ = cce(S,
+                                          lam=self.lam,
+                                          epstol=self.epstol,
+                                          maxitr=self.maxitr,
+                                          penalize_diag=self.penalize_diag)
+        
+        return self
 
-    # if gradient of h1 is given,
-    # compute subgradient of h2 to get as close to zero
-    if g_h1 is not None:
-        # subgradient at discontinuity: i.e. X==0 is in [-1, 1]
-        # choose something in this range to make subgrad as small as possible
-        sg_d = (X==0) * np.divide(g_h1, lambda1, where=(X==0))
-        sg_d = np.sign(sg_d)*np.minimum(np.abs(sg_d), 1)
-        subgrad -= sg_d
+class GraphicalConcordeCV(GraphicalConcorde):
+    """
+    CONCORDe algorithm with cross-validation
+    
+    Parameters
+    ----------
+    lams :  int or array-like of shape (n_lams,), dtype=float
+        Grid of lambdas for cross-validation
+        If an integer is given, it creates a grid of the given number of lambdas
+    epstol : float, default=1e-5
+        Convergence threshold
+    maxitr : int, default=100
+        The maximum number of iterations
+    penalize_diag : bool, default=True
+        Whether or not to penalize the diagonal elements
+    val_score : {'BIC', 'EBIC'}, default='EBIC'
+        Choice of validation score
+    gamma : float, default=None
+        The tuning parameter for EBIC, used only if val_score='EBIC'
+    
+    Attributes
+    ----------
+    precision_ : ndarray of shape (n_features, n_features)
+        Estimated precision matrix
+    best_params_ : float
+        Best parameter chosen by cross-validation
+    cv_results_ : dict of ndarrays
+        A dict with keys:
+        lam : ndarray of shape (n_lams,)
+            Explored lambdas
+        score : ndarray of shape (n_lams,)
+            BIC/EBIC scores corresponding to lambdas
+    hist_ : ndarray of shape (n_iters, 2)
+        The list of values of (successive_norm_diff, objective) at each iteration until convergence
+    """
+    def __init__(self, lams=5, epstol=1e-5, maxitr=100, penalize_diag=True, val_score='EBIC', gamma=0.1):
+        self.lams = lams
+        self.epstol = epstol
+        self.maxitr = maxitr
+        self.penalize_diag = penalize_diag
+        self.val_score = val_score
+        self.gamma = gamma
 
-    return lambda1 * subgrad
+    def fit(self, X, y=None):
+        """
+        Fit CONCORDe with cross-validation
 
-def subgrad(S, X, lambda1):
+        Parameters
+        ----------
+        X : ndarray, shape (n_samples, p_features)
+            Data from which to compute the inverse covariance matrix
+        y : (ignored)
+        """
+        if isinstance(self.lams, int):
+            S = np.cov(X, rowvar=False)
+            S.flat[::S.shape[0] + 1] = 0
+            lam_max = np.max(np.abs(S))
+            lam_min = 0.01 * lam_max
+            lams = np.logspace(np.log10(lam_min), np.log10(lam_max), self.lams)
+        elif isinstance(self.lams, list) | isinstance(self.lams, np.ndarray):
+            lams = self.lams
 
-    g_h1 = grad_h1(X, S, constant=False)
-    subg_h2 = subgrad_h2(X, lambda1, g_h1)
+        S = np.cov(X, rowvar=False)
+        cv_results = []
+        best_lam, best_score = lams[0], np.inf
+        for lam in lams:
+            Omega, hist = cce(S,
+                              lam=lam,
+                              epstol=self.epstol,
+                              maxitr=self.maxitr,
+                              penalize_diag=self.penalize_diag)
 
-    return g_h1 + subg_h2
-
-def pycceista(S, lambda1, epstol=1e-5, maxitr=100, penalize_diagonal=True):
-
-    assert check_symmetry(S)
-    p, _ = S.shape
-
-    if type(lambda1) == float:
-        lambda1 = lambda1mat(lambda1, p, penalize_diagonal)
-
-    assert check_symmetry(lambda1)
-
-    X = np.identity(p)
-
-    run_info = []
-    while True:
-
-        G = grad_h1(X, S, constant=False)
-        tau = 1.0
-        c = 0.5
-
-        inner_itr_count = 0
-        while True:
-
-            Xn = soft_threshold(X - tau*G, tau*lambda1)
-
-            if np.all(Xn.diagonal() > 0) and (h1(Xn, S, constant=False) <= quadratic_approx(Xn, X, S, tau)):
-                break
+            if self.val_score == 'BIC':
+                curr_score = BIC(X, Omega.toarray(), modified=False, gamma=self.gamma)
             else:
-                tau = c*tau
-                inner_itr_count += 1
+                curr_score = BIC(X, Omega.toarray(), modified=True, gamma=self.gamma)
+            
+            cv_results += [{'lam': lam,
+                            'score': curr_score}]
+
+            if best_score >= curr_score:
+                best_lam, best_score = lam, curr_score
+                self.precision_, self.hist_ = Omega, hist
         
-        Xnorm = np.linalg.norm(Xn-X)
-        hn = h1(Xn, S, constant=False) + h2(Xn, lambda1, constant=False)
-
-        itr_info = [[inner_itr_count, Xnorm, hn]]
-        run_info += itr_info
-
-        if Xnorm < epstol or len(run_info) >= maxitr:
-            break
-        else:
-            X = Xn
-    
-    Xn = .5*(np.diag(np.diag(Xn)) @ Xn) + .5*(Xn.T @ np.diag(np.diag(Xn)))
-
-    return Xn, np.array(run_info)
-
-def pycce(S, lambda1, epstol=1e-5, maxitr=100, penalize_diagonal=True):
-
-    assert check_symmetry(S)
-    p, _ = S.shape
-
-    if type(lambda1) == float:
-        lambda1 = lambda1mat(lambda1, p, penalize_diagonal)
-
-    assert check_symmetry(lambda1)
-
-    X = np.identity(p)
-    tau = 1/np.linalg.svd(S)[1][0]
-    
-    run_info = []
-    while True:
-        G = grad_h1(X, S, constant=True)
-        step = X - tau*G
-
-        if penalize_diagonal:
-            y = np.diag(step) - np.diag(tau*lambda1)
-            Xn = soft_threshold(step, tau*lambda1)
-            np.fill_diagonal(Xn, 0.5*(y+np.sqrt(y**2 + 4*tau)))
-        else:
-            y = np.diag(step)
-            Xn = soft_threshold(step, tau*lambda1)
-            np.fill_diagonal(Xn, 0.5*(y+np.sqrt(y**2 + 4*tau)))
-        
-        Xnorm = np.linalg.norm(Xn-X)
-        h = h1(Xn, S, constant=True) + h2(Xn, lambda1, constant=True)
-
-        itr_info = [[Xnorm, h]]
-        run_info += itr_info
-
-        if Xnorm < epstol or len(run_info) >= maxitr:
-            break
-        else:
-            X = Xn
-    
-    Xn = .5*(np.diag(np.diag(Xn)) @ Xn) + .5*(Xn.T @ np.diag(np.diag(Xn)))
-
-    return Xn, np.array(run_info)
+        self.best_param_ = best_lam
+        self.cv_results_ = cv_results
+            
+        return self
