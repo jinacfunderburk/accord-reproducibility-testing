@@ -32,6 +32,7 @@ void sthreshmat(MatrixXd & x,
 SparseMatrix<double> cce(
     Ref<MatrixXd, 0, Stride<Dynamic, Dynamic>> S, 
     Ref<MatrixXd, 0, Stride<Dynamic, Dynamic>> LambdaMat,
+    double lam2,
     double epstol,
     int maxitr,
     double tau,
@@ -53,7 +54,7 @@ SparseMatrix<double> cce(
     double hn, norm_diff;
 
     X.setIdentity();                        // initial guess: X = I
-    grad_h1 = X * S;
+    grad_h1 = X * S + lam2 * X;             // new gradient with l2-regularization
 
     int itr_count;                          // iteration counts
 
@@ -77,10 +78,10 @@ SparseMatrix<double> cce(
         }
        
         Wn = Xn * S;
-        grad_h1 = Wn;
+        grad_h1 = Wn + lam2 * Xn;
 
         norm_diff = (Xn - X).norm();
-        hn = - Xn.diagonal().array().log().sum() + 0.5 * (SparseMatrix<double>(Xn.transpose())*Wn).trace() + Xn.cwiseAbs().cwiseProduct(LambdaMat).sum();
+        hn = - Xn.diagonal().array().log().sum() + 0.5*(SparseMatrix<double>(Xn.transpose())*Wn).trace() + Xn.cwiseAbs().cwiseProduct(LambdaMat).sum() + 0.5*lam2*pow(Xn.norm(),2);
 
         hist_norm_diff(itr_count) = norm_diff;
         hist_hn(itr_count) = hn;

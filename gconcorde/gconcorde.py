@@ -4,14 +4,14 @@ import numpy as np
 def check_symmetry(a, rtol=1e-05, atol=1e-08):
     return np.allclose(a, a.T, rtol=rtol, atol=atol)
 
-def get_lambda_matrix(lam, S):
-    if isinstance(lam, float) | isinstance(lam, int):
-        lam_mat = np.full_like(S, lam, order='F', dtype='float64')
-    elif isinstance(lam, np.ndarray):
-        lam_mat = lam
+def get_lambda_matrix(lam1, S):
+    if isinstance(lam1, float) | isinstance(lam1, int):
+        lam_mat = np.full_like(S, lam1, order='F', dtype='float64')
+    elif isinstance(lam1, np.ndarray):
+        lam_mat = lam1
     return lam_mat
 
-def cce(S, lam=0.1, epstol=1e-5, maxitr=100, penalize_diag=True):
+def cce(S, lam1=0.1, lam2=0.0, epstol=1e-5, maxitr=100, penalize_diag=True):
     """
     CONCORDe algorithm for precision matrix estimation
     
@@ -37,7 +37,7 @@ def cce(S, lam=0.1, epstol=1e-5, maxitr=100, penalize_diag=True):
     """
     assert (type(S) == np.ndarray and S.dtype == 'float64')
 
-    lam_mat = get_lambda_matrix(lam, S)
+    lam_mat = get_lambda_matrix(lam1, S)
     
     assert type(lam_mat) == np.ndarray and lam_mat.dtype == 'float64'
     assert check_symmetry(lam_mat)
@@ -50,7 +50,7 @@ def cce(S, lam=0.1, epstol=1e-5, maxitr=100, penalize_diag=True):
 
     tau = 1/np.linalg.svd(S)[1][0]
 
-    Omega = _cce.cce(S, lam_mat, epstol, maxitr, tau, penalize_diag, hist_norm_diff, hist_hn)
+    Omega = _cce.cce(S, lam_mat, lam2, epstol, maxitr, tau, penalize_diag, hist_norm_diff, hist_hn)
     hist = np.hstack([hist_norm_diff, hist_hn])
     hist = hist[np.where(hist[:,0]!=-1)]
 
@@ -93,8 +93,9 @@ class GraphicalConcorde:
     hist_ : ndarray of shape (n_iters, 2)
         The list of values of (successive_norm_diff, objective) at each iteration until convergence
     """
-    def __init__(self, lam=0.1, epstol=1e-5, maxitr=100, penalize_diag=True):
-        self.lam = lam
+    def __init__(self, lam1=0.1, lam2=0.0, epstol=1e-5, maxitr=100, penalize_diag=True):
+        self.lam1 = lam1
+        self.lam2 = lam2
         self.epstol = epstol
         self.maxitr = maxitr
         self.penalize_diag = penalize_diag
@@ -112,7 +113,8 @@ class GraphicalConcorde:
         S = np.cov(X, rowvar=False)
 
         self.precision_, self.hist_ = cce(S,
-                                          lam=self.lam,
+                                          lam1=self.lam1,
+                                          lam2=self.lam2,
                                           epstol=self.epstol,
                                           maxitr=self.maxitr,
                                           penalize_diag=self.penalize_diag)
@@ -154,8 +156,9 @@ class GraphicalConcordeCV(GraphicalConcorde):
     hist_ : ndarray of shape (n_iters, 2)
         The list of values of (successive_norm_diff, objective) at each iteration until convergence
     """
-    def __init__(self, lams=5, epstol=1e-5, maxitr=100, penalize_diag=True, val_score='EBIC', gamma=0.1):
-        self.lams = lams
+    def __init__(self, lam1s=5, lam2s=[0.1], epstol=1e-5, maxitr=100, penalize_diag=True, val_score='EBIC', gamma=0.1):
+        self.lam1s = lam1s
+        self.lam2s = lam2s
         self.epstol = epstol
         self.maxitr = maxitr
         self.penalize_diag = penalize_diag
@@ -172,38 +175,41 @@ class GraphicalConcordeCV(GraphicalConcorde):
             Data from which to compute the inverse covariance matrix
         y : (ignored)
         """
-        if isinstance(self.lams, int):
+        if isinstance(self.lam1s, int):
             S = np.cov(X, rowvar=False)
             S.flat[::S.shape[0] + 1] = 0
             lam_max = np.max(np.abs(S))
             lam_min = 0.01 * lam_max
-            lams = np.logspace(np.log10(lam_min), np.log10(lam_max), self.lams)
+            lam1s = np.logspace(np.log10(lam_min), np.log10(lam_max), self.lam1s)
         elif isinstance(self.lams, list) | isinstance(self.lams, np.ndarray):
-            lams = self.lams
+            lam1s = self.lam1s
 
         S = np.cov(X, rowvar=False)
         cv_results = []
-        best_lam, best_score = lams[0], np.inf
-        for lam in lams:
-            Omega, hist = cce(S,
-                              lam=lam,
-                              epstol=self.epstol,
-                              maxitr=self.maxitr,
-                              penalize_diag=self.penalize_diag)
+        best_lam1, best_lam2, best_score = lam1s[0], self.lam2s[0], np.inf
+        for lam1 in lam1s:
+            for lam2 in self.lam2s:
+                Omega, hist = cce(S,
+                                  lam1=lam1,
+                                  lam2=lam2,
+                                  epstol=self.epstol,
+                                  maxitr=self.maxitr,
+                                  penalize_diag=self.penalize_diag)
 
-            if self.val_score == 'BIC':
-                curr_score = BIC(X, Omega.toarray(), modified=False, gamma=self.gamma)
-            else:
-                curr_score = BIC(X, Omega.toarray(), modified=True, gamma=self.gamma)
-            
-            cv_results += [{'lam': lam,
-                            'score': curr_score}]
+                if self.val_score == 'BIC':
+                    curr_score = BIC(X, Omega.toarray(), modified=False, gamma=self.gamma)
+                else:
+                    curr_score = BIC(X, Omega.toarray(), modified=True, gamma=self.gamma)
+                
+                cv_results += [{'lam1': lam1,
+                                'lam2': lam2,
+                                'score': curr_score}]
 
-            if best_score >= curr_score:
-                best_lam, best_score = lam, curr_score
-                self.precision_, self.hist_ = Omega, hist
+                if best_score >= curr_score:
+                    best_lam1, best_lam2, best_score = lam1, lam2, curr_score
+                    self.precision_, self.hist_ = Omega, hist
         
-        self.best_param_ = best_lam
+        self.best_param_ = [best_lam1, best_lam2]
         self.cv_results_ = cv_results
             
         return self

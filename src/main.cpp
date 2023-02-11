@@ -8,6 +8,7 @@ namespace py = pybind11;
 Eigen::SparseMatrix<double> cce(
     Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> S,
     Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> LambdaMat,
+    double lam2,
     double epstol,
     int maxitr,
     double tau,
