@@ -5,25 +5,72 @@
 
 namespace py = pybind11;
 
-Eigen::SparseMatrix<double> cce(
+Eigen::SparseMatrix<double> ccista_backtracking(
     Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> S,
+    Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> Omega_star,
+    Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> LambdaMat,
+    double lam2,
+    double epstol,
+    int maxitr,
+    Eigen::Ref<Eigen::VectorXi> hist_inner_itr_count,
+    Eigen::Ref<Eigen::VectorXd> hist_hn,
+    Eigen::Ref<Eigen::VectorXd> hist_successive_norm,
+    Eigen::Ref<Eigen::VectorXd> hist_norm,
+    Eigen::Ref<Eigen::VectorXd> hist_iter_time
+    );
+
+Eigen::SparseMatrix<double> ccista_constant(
+    Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> S,
+    Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> Omega_star,
     Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> LambdaMat,
     double lam2,
     double epstol,
     int maxitr,
     double tau,
-    bool penalize_diagonal,
-    Eigen::Ref<Eigen::VectorXd> hist_norm_diff,
-    Eigen::Ref<Eigen::VectorXd> hist_hn
+    Eigen::Ref<Eigen::VectorXd> hist_hn,
+    Eigen::Ref<Eigen::VectorXd> hist_successive_norm,
+    Eigen::Ref<Eigen::VectorXd> hist_norm,
+    Eigen::Ref<Eigen::VectorXd> hist_iter_time
     );
 
-PYBIND11_MODULE(_gconcorde, m) {
+Eigen::SparseMatrix<double> accord_backtracking(
+    Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> S,
+    Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> Omega_star,
+    Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> LambdaMat,
+    double lam2,
+    double epstol,
+    int maxitr,
+    double tau,
+    bool penalize_diag,
+    Eigen::Ref<Eigen::VectorXi> hist_inner_itr_count,
+    Eigen::Ref<Eigen::VectorXd> hist_hn,
+    Eigen::Ref<Eigen::VectorXd> hist_successive_norm,
+    Eigen::Ref<Eigen::VectorXd> hist_norm,
+    Eigen::Ref<Eigen::VectorXd> hist_iter_time
+    );
+
+Eigen::SparseMatrix<double> accord_constant(
+    Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> S,
+    Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> Omega_star,
+    Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> LambdaMat,
+    double lam2,
+    double epstol,
+    int maxitr,
+    double tau,
+    bool penalize_diag,
+    Eigen::Ref<Eigen::VectorXd> hist_hn,
+    Eigen::Ref<Eigen::VectorXd> hist_successive_norm,
+    Eigen::Ref<Eigen::VectorXd> hist_norm,
+    Eigen::Ref<Eigen::VectorXd> hist_iter_time
+    );
+
+PYBIND11_MODULE(_gaccord, m) {
 
     m.doc() = R"pbdoc(
         Pybind11 example plugin
         -----------------------
 
-        .. currentmodule:: gconcorde
+        .. currentmodule:: gaccord
 
         .. autosummary::
            :toctree: _generate
@@ -39,10 +86,37 @@ PYBIND11_MODULE(_gconcorde, m) {
     )pbdoc";
 
     m.def(
-        "cce",
-        &cce,
+        "ccista_backtracking",
+        &ccista_backtracking,
         R"pbdoc(
-            CCE
+            CC-ISTA with backtracking
+
+            Column-major sparse matrix
+        )pbdoc");
+
+    m.def(
+        "ccista_constant",
+        &ccista_constant,
+        R"pbdoc(
+            CC-ISTA with constant step size
+
+            Column-major sparse matrix
+        )pbdoc");
+
+    m.def(
+        "accord_backtracking",
+        &accord_backtracking,
+        R"pbdoc(
+            ACCORD with backtracking
+
+            Column-major sparse matrix
+        )pbdoc");
+
+    m.def(
+        "accord_constant",
+        &accord_constant,
+        R"pbdoc(
+            ACCORD with constant step size
 
             Column-major sparse matrix
         )pbdoc");

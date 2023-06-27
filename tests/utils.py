@@ -92,32 +92,22 @@ def sensitivity_specificity(Omega, Omega_hat):
 
     return sensitivity, specificity
 
-def BIC(X, Omega, modified=False, gamma=0.1):
+def pseudo_BIC(X, Theta):
     n, p = X.shape
-    Omega_reg = Omega/Omega.diagonal()[None,:]
+    Theta_reg = Theta/Theta.diagonal()[None,:]
     
-    RSS = (X @ Omega_reg)**2
+    RSS = (X @ Theta_reg)**2
     RSS_i = RSS.sum(axis=0)
-    num_nonzero = len(np.flatnonzero(Omega_reg))
-    
-    if modified:
-        BIC = (n*np.log(RSS_i).sum()) + (np.log(n) * num_nonzero) + (4*num_nonzero*gamma*np.log(p))
-    else: 
-        BIC = (n*np.log(RSS_i).sum()) + (np.log(n) * num_nonzero)
+    num_nonzero = len(np.flatnonzero(Theta_reg))
+    BIC = (np.log(n) * num_nonzero) + np.inner(np.diag(Theta), RSS_i) - n*np.sum(np.log(np.diag(Theta)))
     
     return BIC
 
-def pseudo_BIC(X, Omega, modified=False, gamma=0.1):
-    n, p = X.shape
-    Omega_reg = Omega/Omega.diagonal()[None,:]
-    
-    RSS = (X @ Omega_reg)**2
-    RSS_i = RSS.sum(axis=0)
-    num_nonzero = len(np.flatnonzero(Omega_reg))
+def h1(X, S, lam2):
+    return 0.5*np.matmul(X.T, np.matmul(X, S)).trace() + 0.5*lam2*np.linalg.norm(X, 'fro')**2
 
-    if modified:
-        BIC = (np.log(n) * num_nonzero) + np.inner(np.diag(Omega), RSS_i) - n*np.sum(np.log(np.diag(Omega))) + (4*num_nonzero*gamma*np.log(p))
-    else: 
-        BIC = (np.log(n) * num_nonzero) + np.inner(np.diag(Omega), RSS_i) - n*np.sum(np.log(np.diag(Omega)))
+def h2(X, lam1):
+    return -np.log(X.diagonal()).sum() + (lam1 * np.abs(X)).sum()
     
-    return BIC
+def get_precision(X):
+    return .5*(np.diag(np.diag(X)) @ X) + .5*(X.T @ np.diag(np.diag(X)))

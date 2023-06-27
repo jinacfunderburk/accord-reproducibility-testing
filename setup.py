@@ -11,7 +11,7 @@ includes = [
 
 ext_modules = [
     Extension(
-        '_gconcorde',
+        '_gaccord',
         ['src/main.cpp', 'src/core.cpp'],
         include_dirs=includes,
         extra_compile_args=['-std=libc++'],
@@ -20,12 +20,12 @@ ext_modules = [
 ]
 
 setup(
-    name='gconcorde',
+    name='gaccord-convergence',
     version=__version__,
-    author='Sang-Yun Oh',
-    author_email='syoh@ucsb.edu',
-    url='https://github.com/dddlab/gconcorde',
-    description='Implementation of the CONCORDe algorithm',
+    author='Joshua Bang',
+    author_email='joshuaybang@gmail.com',
+    url='https://github.com/joshuaybang/accord-convergence',
+    description='Convergence analysis for the ACCORD algorithm',
     long_description='',
     ext_modules=ext_modules,
     install_requires=['pybind11>=2.2'], # needs to be updated
