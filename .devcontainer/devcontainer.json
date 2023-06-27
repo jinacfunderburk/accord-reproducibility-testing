@@ -1,41 +1,32 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
-// https://github.com/microsoft/vscode-dev-containers/tree/v0.238.0/containers/jupyter-datascience-notebooks
 {
-	"dockerComposeFile": "docker-compose.yml",
-	"service": "app",
-	
-	// Forward Jupyter port locally, mark required
-	"forwardPorts": [8888],
-	"portsAttributes": {
-		"8888": {
-			"label": "gconcorde",
-			"requireLocalPort": true,
-			"onAutoForward": "ignore"
-		}
-	},
+    "name": "Jupyter",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
 
-	// Configure tool-specific properties.
-	"customizations": {
-		// Configure properties specific to VS Code.
-		"vscode": {
-			// Set *default* container specific settings.json values on container create.
-			"settings": { 
-				"python.defaultInterpreterPath": "/opt/conda/bin/python"
-			},
-			
-			// Add the IDs of extensions you want installed when the container is created.
-			"extensions": [
-				"ms-python.python"
-			]
-		}
-	},
+    "workspaceMount": "source=${localWorkspaceFolder},target=/home/jovyan/work,type=bind",
+    "workspaceFolder": "/home/jovyan/work",
 
-	"workspaceFolder": "/workspace/gconcorde",
+    "forwardPorts": [8888],
+    "overrideCommand": false,
+    //"postStartCommand": "nohup bash -c 'jupyter lab --allow-root --ip 0.0.0.0 --ServerApp.allow_origin=\"*\" &'",
 
-	// Use 'postCreateCommand' to run commands after the container is created.
-	//"postCreateCommand": "rmdir /home/jovyan/work && ln -s /workspaces/gconcorde /home/jovyan/work && pip install -e /workspaces/gconcorde",
-	"postCreateCommand": "rmdir /home/jovyan/work && ln -s /workspace/gconcorde /home/jovyan/work && pip install -e /workspace/gconcorde",
+    //"remoteUser": "root",
+    //"runArgs": [],
 
-	// Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
-	"remoteUser": "jovyan"
+    "customizations": {
+
+        "vscode": {
+            "settings": {
+                "python.defaultInterpreterPath": "/opt/conda/bin/python",
+            },
+            "extensions": [
+                "ms-python.python",
+                "ms-toolsai.jupyter",
+                "ms-toolsai.jupyter-keymap",
+                "analytic-signal.preview-pdf"
+            ]
+        }
+
+    }
 }
