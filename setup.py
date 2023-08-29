@@ -20,12 +20,12 @@ ext_modules = [
 ]
 
 setup(
-    name='gaccord-convergence',
+    name='gaccord-reproducibility',
     version=__version__,
     author='Joshua Bang',
     author_email='joshuaybang@gmail.com',
-    url='https://github.com/joshuaybang/accord-convergence',
-    description='Convergence analysis for the ACCORD algorithm',
+    url='https://github.com/joshuaybang/accord-reproducibility',
+    description='Reproducibility for the ACCORD simulations',
     long_description='',
     ext_modules=ext_modules,
     install_requires=['pybind11>=2.2'], # needs to be updated
