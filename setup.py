@@ -20,7 +20,7 @@ ext_modules = [
 ]
 
 setup(
-    name='gaccord-reproducibility',
+    name='accord-reproducibility',
     version=__version__,
     author='Joshua Bang',
     author_email='joshuaybang@gmail.com',
