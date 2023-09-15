@@ -1,4 +1,4 @@
-FROM docker.io/jupyter/scipy-notebook:2022-06-20
+FROM docker.io/jupyter/datascience-notebook:2022-06-20
 
 USER root
 
