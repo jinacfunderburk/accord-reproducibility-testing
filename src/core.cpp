@@ -61,7 +61,7 @@ SparseMatrix<double> ccista_backtracking(
     X.setIdentity();                        // initial guess: X = I
     W = X * S;
     grad_h1 = -1*X.diagonal().asDiagonal().inverse();
-    grad_h1 += W;
+    grad_h1 += 0.5 * (W + W.transpose());
     grad_h1 += lam2 * X;
     h1 = - X.diagonal().array().log().sum() + 0.5 * (SparseMatrix<double>(X.transpose())*W).trace();
 
@@ -72,8 +72,7 @@ SparseMatrix<double> ccista_backtracking(
 
         high_resolution_clock::time_point t1 = high_resolution_clock::now();
  
-        tau = tau_;  // for backtracking
-        // tau = 0.85; // for fixed step size
+        tau = tau_;
 
         inner_itr_count = 0;
 
@@ -104,7 +103,7 @@ SparseMatrix<double> ccista_backtracking(
         elapsed = time_span.count();
 
         grad_h1 = -1*Xn.diagonal().asDiagonal().inverse();
-        grad_h1 += Wn;
+        grad_h1 += 0.5 * (Wn + Wn.transpose());
         grad_h1 += lam2 * Xn;
 
         hn = h1n + Xn.cwiseAbs().cwiseProduct(LambdaMat).sum();
@@ -171,7 +170,7 @@ SparseMatrix<double> ccista_constant(
     X.setIdentity();                         // initial guess: X = I
     W = X * S;
     grad_h1 = -1*X.diagonal().asDiagonal().inverse();
-    grad_h1 += W;
+    grad_h1 += 0.5 * (W + W.transpose());
     grad_h1 += lam2 * X;
     h1 = - X.diagonal().array().log().sum() + 0.5 * (SparseMatrix<double>(X.transpose())*W).trace();
 
@@ -194,7 +193,7 @@ SparseMatrix<double> ccista_constant(
         elapsed = time_span.count();
 
         grad_h1 = -1*Xn.diagonal().asDiagonal().inverse();
-        grad_h1 += Wn;
+        grad_h1 += 0.5 * (Wn + Wn.transpose());
         grad_h1 += lam2 * Xn;
 
         hn = h1n + Xn.cwiseAbs().cwiseProduct(LambdaMat).sum();

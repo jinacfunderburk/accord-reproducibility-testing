@@ -50,7 +50,7 @@ def generate_data(p, n_prop_to_p, Sigma, N=1, random_state=2023):
             rs = np.random.RandomState(random_state)
             X = rs.multivariate_normal(mean=np.zeros(p), cov=Sigma, size=n)
             X_std = standardize(X, bias=False)
-            Xs.append(X)
+            Xs.append(X_std)
             random_state += 1
 
     return Xs
