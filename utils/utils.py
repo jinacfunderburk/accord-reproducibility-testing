@@ -93,14 +93,12 @@ def pseudo_BIC(X, Omega, Theta, type='theta', modified=False, gamma=0.1):
     
     return BIC
 
-def gauss_BIC(X, Omega, Theta, type='theta'):
+def gauss_BIC(X, Theta, type='theta'):
     n, p = X.shape
     S = np.cov(X, rowvar=False)
 
     if type == 'theta':
         num_param = len(np.flatnonzero(Theta))
-    elif type == 'omega':
-        num_param = len(np.flatnonzero(Omega))
     elif type == 'edge':
         num_param = ((len(np.flatnonzero(Theta)) - p)/2) + p
 
