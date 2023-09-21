@@ -10,4 +10,5 @@ Directory Structure
  - __gaccord__: It contains Python classes for the ACCORD & CONCORD algorithms.
  - __simulation-convergence__: It contains code for reproducing results for the linear convergence property of the ACCORD algorithm.
  - __simulation-debiasing__: It contains code for reproducing results for debiasing experiments.
+ - __simulation-edge-detection__: It contains code for reproducing results for comparing edge detection rates between methods.
  - __output__: It contains all results.
