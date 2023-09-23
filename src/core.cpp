@@ -226,8 +226,214 @@ SparseMatrix<double> ccista_constant(
     return Xn;
 }
 
-//////////// ACCORD with backtracking ////////////
-SparseMatrix<double> accord_backtracking(
+//////////// ACCORD-ISTA with backtracking ////////////
+SparseMatrix<double> accord_ista_backtracking(
+    Ref<MatrixXd, 0, Stride<Dynamic, Dynamic>> S,
+    Ref<MatrixXd, 0, Stride<Dynamic, Dynamic>> Omega_star,
+    Ref<MatrixXd, 0, Stride<Dynamic, Dynamic>> LambdaMat,
+    double lam2,
+    double epstol,
+    int maxitr,
+    Ref<VectorXi> hist_inner_itr_count,
+    Ref<VectorXd> hist_hn,
+    Ref<VectorXd> hist_successive_norm,
+    Ref<VectorXd> hist_norm,
+    Ref<VectorXd> hist_iter_time
+    ) {
+
+    int p = S.cols();
+
+    SparseMatrix<double> X(p, p), Xn(p, p); // current and next estimate
+    SparseMatrix<double> Step(p, p);        // Xn - X
+    MatrixXd W(p, p), Wn(p, p);             // X*S
+
+    MatrixXd subg(p, p);
+    MatrixXd grad_h1(p, p);                 // gradient of h1
+    MatrixXd subgrad_h2(p, p);              // subgradient of h2
+    MatrixXd tmp(p, p);
+
+    double Q, hn, h1, h1n, successive_norm, omega_star_norm;
+    double tau, tau_ = 1.0;
+    double c_ = 0.5;
+    double elapsed;
+
+    grad_h1 = -1*X.diagonal().asDiagonal().inverse();
+    grad_h1 += 0.5 * (W + W.transpose());
+    grad_h1 += lam2 * X;
+
+    X.setIdentity();                        // initial guess: X = I
+    W = X * S;
+    grad_h1 = -1*X.diagonal().asDiagonal().inverse();
+    grad_h1 += W;
+    grad_h1 += lam2 * X;
+    h1 = - X.diagonal().array().log().sum() + 0.5 * (SparseMatrix<double>(X.transpose())*W).trace();
+
+    int outer_itr_count, inner_itr_count;        // iteration counts
+
+    outer_itr_count = 0;
+    while (true) {
+
+        high_resolution_clock::time_point t1 = high_resolution_clock::now();
+ 
+        tau = tau_;
+
+        inner_itr_count = 0;
+
+        while (true) {
+            tmp = MatrixXd(X) - tau*grad_h1;
+            sthreshmat(tmp, tau, LambdaMat);
+            Xn = tmp.sparseView();
+
+            if (tmp.diagonal().minCoeff() > 0) {
+
+                Step = Xn - X;
+                Wn = Xn * S;
+
+                h1n = - Xn.diagonal().array().log().sum() + 0.5 * (SparseMatrix<double>(Xn.transpose())*Wn).trace() + 0.5*lam2*pow(Xn.norm(),2);
+                Q = h1 + Step.cwiseProduct(grad_h1).sum() + (0.5/tau)*Step.squaredNorm();
+
+                if (h1n <= Q)
+                    break; 
+
+            }
+
+            tau *= c_;
+            inner_itr_count += 1;
+        }
+
+        high_resolution_clock::time_point t2 = high_resolution_clock::now();
+        duration<double> time_span = duration_cast<duration<double>>(t2 - t1);
+        elapsed = time_span.count();
+
+        grad_h1 = -1*Xn.diagonal().asDiagonal().inverse();
+        grad_h1 += Wn;
+        grad_h1 += lam2 * Xn;
+
+        hn = h1n + Xn.cwiseAbs().cwiseProduct(LambdaMat).sum();
+        successive_norm = Step.norm();
+        omega_star_norm = (Xn - Omega_star).norm();
+
+        hist_inner_itr_count(outer_itr_count) = inner_itr_count;
+        hist_hn(outer_itr_count) = hn;
+        hist_successive_norm(outer_itr_count) = successive_norm;
+        hist_norm(outer_itr_count) = omega_star_norm;
+        hist_iter_time(outer_itr_count) = elapsed;
+
+        outer_itr_count += 1;
+
+        if (omega_star_norm < epstol || outer_itr_count >= maxitr) {
+            if (outer_itr_count <= maxitr) {
+                hist_inner_itr_count(outer_itr_count) = -1;
+                hist_hn(outer_itr_count) = -1;
+                hist_successive_norm(outer_itr_count) = -1;
+                hist_norm(outer_itr_count) = -1;
+                hist_iter_time(outer_itr_count) = -1;
+            }
+            break;
+        } else {
+            h1 = h1n;
+            X = Xn;
+            W = Wn;
+        }
+
+    }
+
+    return Xn;
+}
+
+
+//////////// ACCORD-ISTA with constant step size ////////////
+SparseMatrix<double> accord_ista_constant(
+    Ref<MatrixXd, 0, Stride<Dynamic, Dynamic>> S,
+    Ref<MatrixXd, 0, Stride<Dynamic, Dynamic>> Omega_star,
+    Ref<MatrixXd, 0, Stride<Dynamic, Dynamic>> LambdaMat,
+    double lam2,
+    double epstol,
+    int maxitr,
+    double tau,
+    Ref<VectorXd> hist_hn,
+    Ref<VectorXd> hist_successive_norm,
+    Ref<VectorXd> hist_norm,
+    Ref<VectorXd> hist_iter_time
+    ) {
+
+    int p = S.cols();
+
+    SparseMatrix<double> X(p, p), Xn(p, p); // current and next estimate
+    SparseMatrix<double> Step(p, p);        // Xn - X
+    MatrixXd W(p, p), Wn(p, p);             // X*S
+
+    MatrixXd subg(p, p);
+    MatrixXd grad_h1(p, p);                 // gradient of h1
+    MatrixXd subgrad_h2(p, p);              // subgradient of h2
+    MatrixXd tmp(p, p);
+
+    double hn, h1, h1n, successive_norm, omega_star_norm;
+    double elapsed;
+
+    X.setIdentity();                         // initial guess: X = I
+    W = X * S;
+
+    grad_h1 = -1*X.diagonal().asDiagonal().inverse();
+    grad_h1 += W;
+    grad_h1 += lam2 * X;
+    h1 = - X.diagonal().array().log().sum() + 0.5 * (SparseMatrix<double>(X.transpose())*W).trace();
+
+    int itr_count;                             // iteration counts
+
+    itr_count = 0;
+    while (true) {
+
+        high_resolution_clock::time_point t1 = high_resolution_clock::now();
+
+        tmp = MatrixXd(X) - tau*grad_h1;
+        sthreshmat(tmp, tau, LambdaMat);
+        Xn = tmp.sparseView();
+        Step = Xn - X;
+        Wn = Xn * S;
+        h1n = - Xn.diagonal().array().log().sum() + 0.5 * (SparseMatrix<double>(Xn.transpose())*Wn).trace() + 0.5*lam2*pow(Xn.norm(),2);
+
+        high_resolution_clock::time_point t2 = high_resolution_clock::now();
+        duration<double> time_span = duration_cast<duration<double>>(t2 - t1);
+        elapsed = time_span.count();
+
+        grad_h1 = -1*Xn.diagonal().asDiagonal().inverse();
+        grad_h1 += Wn;
+        grad_h1 += lam2 * Xn;
+
+        hn = h1n + Xn.cwiseAbs().cwiseProduct(LambdaMat).sum();
+        successive_norm = Step.norm();
+        omega_star_norm = (Xn - Omega_star).norm();
+
+        hist_hn(itr_count) = hn;
+        hist_successive_norm(itr_count) = successive_norm;
+        hist_norm(itr_count) = omega_star_norm;
+        hist_iter_time(itr_count) = elapsed;
+
+        itr_count += 1;
+
+        if (omega_star_norm < epstol || itr_count >= maxitr) {
+            if (itr_count <= maxitr) {
+                hist_hn(itr_count) = -1;
+                hist_successive_norm(itr_count) = -1;
+                hist_norm(itr_count) = -1;
+                hist_iter_time(itr_count) = -1;
+            }
+            break;
+        } else {
+            h1 = h1n;
+            X = Xn;
+            W = Wn;
+        }
+
+    }
+
+    return Xn;
+}
+
+
+//////////// ACCORD-FBS with backtracking ////////////
+SparseMatrix<double> accord_fbs_backtracking(
     Ref<MatrixXd, 0, Stride<Dynamic, Dynamic>> S,
     Ref<MatrixXd, 0, Stride<Dynamic, Dynamic>> Omega_star,
     Ref<MatrixXd, 0, Stride<Dynamic, Dynamic>> LambdaMat,
@@ -342,8 +548,8 @@ SparseMatrix<double> accord_backtracking(
     return Xn;
 }
 
-//////////// ACCORD with constant step size ////////////
-SparseMatrix<double> accord_constant(
+//////////// ACCORD-FBS with constant step size ////////////
+SparseMatrix<double> accord_fbs_constant(
     Ref<MatrixXd, 0, Stride<Dynamic, Dynamic>> S,
     Ref<MatrixXd, 0, Stride<Dynamic, Dynamic>> Omega_star,
     Ref<MatrixXd, 0, Stride<Dynamic, Dynamic>> LambdaMat,

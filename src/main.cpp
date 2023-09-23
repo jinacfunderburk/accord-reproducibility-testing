@@ -33,7 +33,35 @@ Eigen::SparseMatrix<double> ccista_constant(
     Eigen::Ref<Eigen::VectorXd> hist_iter_time
     );
 
-Eigen::SparseMatrix<double> accord_backtracking(
+Eigen::SparseMatrix<double> accord_ista_backtracking(
+    Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> S,
+    Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> Omega_star,
+    Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> LambdaMat,
+    double lam2,
+    double epstol,
+    int maxitr,
+    Eigen::Ref<Eigen::VectorXi> hist_inner_itr_count,
+    Eigen::Ref<Eigen::VectorXd> hist_hn,
+    Eigen::Ref<Eigen::VectorXd> hist_successive_norm,
+    Eigen::Ref<Eigen::VectorXd> hist_norm,
+    Eigen::Ref<Eigen::VectorXd> hist_iter_time
+    );
+
+Eigen::SparseMatrix<double> accord_ista_constant(
+    Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> S,
+    Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> Omega_star,
+    Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> LambdaMat,
+    double lam2,
+    double epstol,
+    int maxitr,
+    double tau,
+    Eigen::Ref<Eigen::VectorXd> hist_hn,
+    Eigen::Ref<Eigen::VectorXd> hist_successive_norm,
+    Eigen::Ref<Eigen::VectorXd> hist_norm,
+    Eigen::Ref<Eigen::VectorXd> hist_iter_time
+    );
+
+Eigen::SparseMatrix<double> accord_fbs_backtracking(
     Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> S,
     Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> Omega_star,
     Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> LambdaMat,
@@ -49,7 +77,7 @@ Eigen::SparseMatrix<double> accord_backtracking(
     Eigen::Ref<Eigen::VectorXd> hist_iter_time
     );
 
-Eigen::SparseMatrix<double> accord_constant(
+Eigen::SparseMatrix<double> accord_fbs_constant(
     Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> S,
     Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> Omega_star,
     Eigen::Ref<Eigen::MatrixXd, 0, Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic>> LambdaMat,
@@ -104,19 +132,37 @@ PYBIND11_MODULE(_gaccord, m) {
         )pbdoc");
 
     m.def(
-        "accord_backtracking",
-        &accord_backtracking,
+        "accord_ista_backtracking",
+        &accord_ista_backtracking,
         R"pbdoc(
-            ACCORD with backtracking
+            ACCORD-ISTA with backtracking
 
             Column-major sparse matrix
         )pbdoc");
 
     m.def(
-        "accord_constant",
-        &accord_constant,
+        "accord_ista_constant",
+        &accord_ista_constant,
         R"pbdoc(
-            ACCORD with constant step size
+            ACCORD-ISTA with constant step size
+
+            Column-major sparse matrix
+        )pbdoc");
+
+    m.def(
+        "accord_fbs_backtracking",
+        &accord_fbs_backtracking,
+        R"pbdoc(
+            ACCORD-FBS with backtracking
+
+            Column-major sparse matrix
+        )pbdoc");
+
+    m.def(
+        "accord_fbs_constant",
+        &accord_fbs_constant,
+        R"pbdoc(
+            ACCORD-FBS with constant step size
 
             Column-major sparse matrix
         )pbdoc");

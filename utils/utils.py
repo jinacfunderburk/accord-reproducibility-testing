@@ -72,17 +72,13 @@ def precision_recall(Theta, Theta_hat):
 
     return precision, recall
 
-def pseudo_BIC(X, Theta, type='edge', modified=False, gamma=0.1):
+def pseudo_BIC(X, Theta, modified=False, gamma=0.1):
     n, p = X.shape
     Theta_reg = Theta/Theta.diagonal()[None,:]
     
     RSS = (X @ Theta_reg)**2
     RSS_i = RSS.sum(axis=0)
-
-    if type == 'edge':
-        num_param = ((len(np.flatnonzero(Theta)) - p)/2)
-    elif type == 'nz':
-        num_param = len(np.flatnonzero(Theta))
+    num_param = ((len(np.flatnonzero(Theta)) - p)/2)
     
     if modified:
         BIC = (np.log(n) * num_param) + np.inner(np.diag(Theta), RSS_i) - n*np.sum(np.log(np.diag(Theta))) + 4*num_param*gamma*np.log(p)
@@ -91,15 +87,11 @@ def pseudo_BIC(X, Theta, type='edge', modified=False, gamma=0.1):
     
     return BIC
 
-def gauss_BIC(X, Theta, type='edge'):
+def gauss_BIC(X, Theta):
     n, p = X.shape
     S = np.cov(X, rowvar=False)
-
-    if type == 'edge':
-        num_param = ((len(np.flatnonzero(Theta)) - p)/2)
-    elif type == 'nz':
-        num_param = len(np.flatnonzero(Theta)) - p
-
+    num_param = ((len(np.flatnonzero(Theta)) - p)/2)
+    
     BIC = (np.log(n) * num_param) + n*(-np.log(np.linalg.det(Theta) + np.trace(Theta @ S)))
     
     return BIC

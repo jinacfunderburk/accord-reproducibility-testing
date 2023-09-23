@@ -71,7 +71,7 @@ def ccista(S, Omega_star, lam1=0.1, lam2=0.0, constant_stepsize=0.5, backtrackin
 
     return Omega, hist
 
-def accord(S, Omega_star, lam1=0.1, lam2=0.0, stepsize_multiplier=1, backtracking=True, epstol=1e-5, maxitr=100, penalize_diag=True):
+def accord(S, Omega_star, lam1=0.1, lam2=0.0, split='fbs', stepsize_multiplier=1.0, constant_stepsize=0.5, backtracking=True, epstol=1e-5, maxitr=100, penalize_diag=True):
     """
     Modified ACCORD algorithm for convergence analysis
     
@@ -85,6 +85,8 @@ def accord(S, Omega_star, lam1=0.1, lam2=0.0, stepsize_multiplier=1, backtrackin
         The l1-regularization parameter
     lam2 : float
         The l2-regularization parameter
+    split : {'fbs', 'ista'}, default='fbs'
+        The type of split
     stepsize_multiplier : int or float
         Multiplier for stepsize
     backtracking : bool, default=True
@@ -122,13 +124,21 @@ def accord(S, Omega_star, lam1=0.1, lam2=0.0, stepsize_multiplier=1, backtrackin
 
     tau = (stepsize_multiplier*1)/np.linalg.svd(S)[1][0]
 
-    if backtracking:
-        Omega = _accord.accord_backtracking(S, Omega_star, lam_mat, lam2, epstol, maxitr, tau, penalize_diag, hist_inner_itr_count, hist_hn, hist_successive_norm, hist_norm, hist_iter_time)
-        hist = np.hstack([hist_inner_itr_count, hist_hn, hist_successive_norm, hist_norm, hist_iter_time])
-    else:
-        Omega = _accord.accord_constant(S, Omega_star, lam_mat, lam2, epstol, maxitr, tau, penalize_diag, hist_hn, hist_successive_norm, hist_norm, hist_iter_time)
-        hist = np.hstack([hist_hn, hist_successive_norm, hist_norm, hist_iter_time])
-    
+    if split == 'fbs':
+        if backtracking:
+            Omega = _accord.accord_fbs_backtracking(S, Omega_star, lam_mat, lam2, epstol, maxitr, tau, penalize_diag, hist_inner_itr_count, hist_hn, hist_successive_norm, hist_norm, hist_iter_time)
+            hist = np.hstack([hist_inner_itr_count, hist_hn, hist_successive_norm, hist_norm, hist_iter_time])
+        else:
+            Omega = _accord.accord_fbs_constant(S, Omega_star, lam_mat, lam2, epstol, maxitr, tau, penalize_diag, hist_hn, hist_successive_norm, hist_norm, hist_iter_time)
+            hist = np.hstack([hist_hn, hist_successive_norm, hist_norm, hist_iter_time])
+    elif split == 'ista':
+        if backtracking:
+            Omega = _accord.accord_ista_backtracking(S, Omega_star, lam_mat, lam2, epstol, maxitr, hist_inner_itr_count, hist_hn, hist_successive_norm, hist_norm, hist_iter_time)
+            hist = np.hstack([hist_inner_itr_count, hist_hn, hist_successive_norm, hist_norm, hist_iter_time])
+        else:
+            Omega = _accord.accord_ista_constant(S, Omega_star, lam_mat, lam2, epstol, maxitr, constant_stepsize, hist_hn, hist_successive_norm, hist_norm, hist_iter_time)
+            hist = np.hstack([hist_hn, hist_successive_norm, hist_norm, hist_iter_time])
+
     hist = hist[np.where(hist[:,0]!=-1)]
 
     return Omega, hist
@@ -210,6 +220,8 @@ class GraphicalAccord:
         The l1-regularization parameter
     lam2 : float
         The l2-regularization parameter
+    split : {'fbs', 'ista'}, default='fbs'
+        The type of split
     stepsize_multiplier : int or float
         Multiplier for stepsize
     backtracking : bool, default=True
@@ -229,11 +241,13 @@ class GraphicalAccord:
         The list of values of (inner_iter_count, objective, successive_norm, omega_star_norm, iter_time) at each iteration until convergence
         inner_iter_count is included only when backtracking=True
     """
-    def __init__(self, Omega_star=None, lam1=0.1, lam2=0.0, stepsize_multiplier=1, backtracking=True, epstol=1e-5, maxitr=100, penalize_diag=True):
+    def __init__(self, Omega_star=None, lam1=0.1, lam2=0.0, split='fbs', stepsize_multiplier=1.0, constant_stepsize=0.5, backtracking=True, epstol=1e-5, maxitr=100, penalize_diag=True):
         self.Omega_star = Omega_star
         self.lam1 = lam1
         self.lam2 = lam2
+        self.split = split
         self.stepsize_multiplier = stepsize_multiplier
+        self.constant_stepsize = constant_stepsize
         self.backtracking = backtracking
         self.epstol = epstol
         self.maxitr = maxitr
@@ -255,7 +269,9 @@ class GraphicalAccord:
                                          Omega_star=self.Omega_star,
                                          lam1=self.lam1,
                                          lam2=self.lam2,
+                                         split=self.split,
                                          stepsize_multiplier=self.stepsize_multiplier,
+                                         constant_stepsize=self.constant_stepsize,
                                          backtracking=self.backtracking,
                                          epstol=self.epstol,
                                          maxitr=self.maxitr,
