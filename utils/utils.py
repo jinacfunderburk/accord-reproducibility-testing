@@ -13,56 +13,39 @@ def standardize(X, bias=False):
     
     return X_std
 
-def partial_corr(A):
-    std_inv = np.diag(np.sqrt(1/np.diag(A)))
-    A_corr = -1 * (std_inv @ A @ std_inv)
-    np.fill_diagonal(A_corr, 1)
+def partial_corr(Theta):
+    std_inv = np.diag(np.sqrt(1/np.diag(Theta)))
+    Rho = -1 * (std_inv @ Theta @ std_inv)
+    np.fill_diagonal(Rho, 1)
     
-    return A_corr
+    return Rho
 
-def compute_tp_fp(Theta, Theta_hat):
-    Theta_vec = np.where(Theta!=0, 1, 0).ravel()
-    Theta_hat_vec = np.where(Theta_hat!=0, 1, 0).ravel()
+def tp_fp(Theta, Theta_hat):
+    Theta_bool = np.where(Theta != 0, 1, 0)
+    Theta_hat_bool = np.where(Theta_hat != 0, 1, 0)
 
     p = len(Theta)
-    indx = np.arange(0, p**2, p+1)
-    Theta_vec = np.where(Theta_vec != 0, 1, 0)
-    Theta_vec = np.delete(Theta_vec, indx)
-    Theta_hat_vec = np.where(Theta_hat_vec != 0, 1, 0)
-    Theta_hat_vec = np.delete(Theta_hat_vec, indx)
-    tn, fp, fn, tp = sklearn.metrics.confusion_matrix(Theta_vec, Theta_hat_vec).ravel()
+    mask = np.tri(p, p, k=-1, dtype=bool)
+    edge_true = Theta_bool[mask]
+    edge_hat = Theta_hat_bool[mask]
+
+    tp = np.sum((edge_true == 1) & (edge_hat == 1))
+    fp = np.sum((edge_true == 0) & (edge_hat == 1))
+
     return tp, fp
 
-def mcc(Theta, Theta_hat):
-    """
-    Compute Matthew's Correlation Coefficient (MCC) between two matrices.
-    If diag=False, it excludes diagonal elements before computing MCC.
-    """
-    Theta_vec = Theta.ravel()
-    Theta_hat_vec = Theta_hat.ravel()
-
-    p = len(Theta)
-    indx = np.arange(0, p**2, p+1)
-    Theta_vec = np.where(Theta_vec != 0, 1, 0)
-    Theta_vec = np.delete(Theta_vec, indx)
-    Theta_hat_vec = np.where(Theta_hat_vec != 0, 1, 0)
-    Theta_hat_vec = np.delete(Theta_hat_vec, indx)
-    
-    return sklearn.metrics.matthews_corrcoef(Theta_vec, Theta_hat_vec)
-
 def precision_recall(Theta, Theta_hat):
-    Theta_vec = Theta.ravel()
-    Theta_hat_vec = Theta_hat.ravel()
+    Theta_bool = np.where(Theta != 0, 1, 0)
+    Theta_hat_bool = np.where(Theta_hat != 0, 1, 0)
 
     p = len(Theta)
-    indx = np.arange(0, p**2, p+1)
-    Theta_vec = np.where(Theta_vec != 0, 1, 0)
-    Theta_vec = np.delete(Theta_vec, indx)
-    Theta_hat_vec = np.where(Theta_hat_vec != 0, 1, 0)
-    Theta_hat_vec = np.delete(Theta_hat_vec, indx)
+    mask = np.tri(p, p, k=-1, dtype=bool)
+    edge_true = Theta_bool[mask]
+    edge_hat = Theta_hat_bool[mask]
 
-    tn, fp, fn, tp = sklearn.metrics.confusion_matrix(Theta_vec, Theta_hat_vec).ravel()
-    pos = len(np.nonzero(Theta_vec)[0])
+    tp = np.sum((edge_true == 1) & (edge_hat == 1))
+    fp = np.sum((edge_true == 0) & (edge_hat == 1))
+    pos = np.sum(edge_true)
 
     if tp + fp != 0:
         precision = tp/(tp+fp)
@@ -71,6 +54,20 @@ def precision_recall(Theta, Theta_hat):
     recall = tp/pos
 
     return precision, recall
+
+def mcc(Theta, Theta_hat):
+    """
+    Compute Matthew's Correlation Coefficient (MCC) between two symmetric matrices.
+    """
+    Theta_bool = np.where(Theta != 0, 1, 0)
+    Theta_hat_bool = np.where(Theta_hat != 0, 1, 0)
+
+    p = len(Theta)
+    mask = np.tri(p, p, k=-1, dtype=bool)
+    edge_true = Theta_bool[mask]
+    edge_hat = Theta_hat_bool[mask]
+    
+    return sklearn.metrics.matthews_corrcoef(edge_true, edge_hat)
 
 def pseudo_BIC(X, Theta, modified=False, gamma=0.1):
     n, p = X.shape
@@ -81,30 +78,30 @@ def pseudo_BIC(X, Theta, modified=False, gamma=0.1):
     num_param = ((len(np.flatnonzero(Theta)) - p)/2)
     
     if modified:
-        BIC = (np.log(n) * num_param) + np.inner(np.diag(Theta), RSS_i) - n*np.sum(np.log(np.diag(Theta))) + 4*num_param*gamma*np.log(p)
+        BIC = (num_param * np.log(n)) + np.inner(np.diag(Theta), RSS_i) - n*np.sum(np.log(np.diag(Theta))) + 4*num_param*gamma*np.log(p)
     else:
-        BIC = (np.log(n) * num_param) + np.inner(np.diag(Theta), RSS_i) - n*np.sum(np.log(np.diag(Theta)))
+        BIC = (num_param * np.log(n)) + np.inner(np.diag(Theta), RSS_i) - n*np.sum(np.log(np.diag(Theta)))
     
     return BIC
 
 def gauss_BIC(X, Theta):
     n, p = X.shape
-    S = np.cov(X, rowvar=False)
+    S = np.matmul(X.T, X, dtype=np.float64)/n
     num_param = ((len(np.flatnonzero(Theta)) - p)/2)
     
-    BIC = (np.log(n) * num_param) + n*(-np.log(np.linalg.det(Theta) + np.trace(Theta @ S)))
+    BIC = (num_param * np.log(n)) - 2*(np.log(np.linalg.det(Theta)) - np.trace(Theta @ S))
     
     return BIC
 
-def proj_precision_mat(Omega, nz_indx):
-    eig_val, eig_vec = np.linalg.eig(Omega)
+def proj_precision_mat(Theta, nz_indx):
+    eig_val, eig_vec = np.linalg.eig(Theta)
     eig_val_new = np.maximum(eig_val, 0.4)
-    Omega_temp = eig_vec @ np.diag(eig_val_new) @ eig_vec.T
-    Omega_new = np.zeros_like(Omega_temp)
-    Omega_new[nz_indx] = Omega_temp[nz_indx]
-    np.fill_diagonal(Omega_new, 1)
-    Omega_new = 0.5*(Omega_new + Omega_new.T)
-    return Omega_new
+    Theta_temp = eig_vec @ np.diag(eig_val_new) @ eig_vec.T
+    Theta_new = np.zeros_like(Theta_temp)
+    Theta_new[nz_indx] = Theta_temp[nz_indx]
+    np.fill_diagonal(Theta_new, 1)
+    Theta_new = 0.5*(Theta_new + Theta_new.T)
+    return Theta_new
 
 def h1(X, S, lam2):
     return 0.5*np.matmul(X.T, np.matmul(X, S)).trace() + 0.5*lam2*np.linalg.norm(X, 'fro')**2

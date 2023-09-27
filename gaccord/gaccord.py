@@ -194,7 +194,7 @@ class GraphicalConcord:
             Data from which to compute the inverse covariance matrix
         y : (ignored)
         """
-        S = np.cov(X, rowvar=False)
+        S = np.matmul(X.T, X) / X.shape[0]
 
         self.omega_, self.hist_ = ccista(S,
                                          Omega_star=self.Omega_star,
@@ -263,7 +263,7 @@ class GraphicalAccord:
             Data from which to compute the inverse covariance matrix
         y : (ignored)
         """
-        S = np.cov(X, rowvar=False)
+        S = np.matmul(X.T, X) / X.shape[0]
         
         self.omega_, self.hist_ = accord(S,
                                          Omega_star=self.Omega_star,

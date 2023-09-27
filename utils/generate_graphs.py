@@ -2,7 +2,7 @@ import numpy as np
 import networkx as nx
 from utils import standardize, partial_corr, proj_precision_mat
 
-def generate_erdos_renyi(p, n_prop_to_p, type='proj', edge_prob=0.01, lower_weight=0.5, upper_weight=1.0, spread_diag=[1, np.sqrt(3)], random_state=2023):
+def generate_erdos_renyi(p, type='proj', edge_prob=0.01, lower_weight=0.5, upper_weight=1.0, spread_diag=[1, np.sqrt(3)], random_state=2023):
     G = nx.generators.random_graphs.erdos_renyi_graph(n=p, p=edge_prob, seed=random_state)
     Skel = nx.to_numpy_matrix(G)
 
