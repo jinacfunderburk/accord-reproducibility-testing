@@ -11,4 +11,5 @@ Directory Structure
  - __simulation-convergence__: It contains code for reproducing results for the linear convergence property of the ACCORD algorithm.
  - __simulation-debiasing__: It contains code for reproducing results for debiasing experiments.
  - __simulation-edge-detection__: It contains code for reproducing results for comparing edge detection rates between methods.
+ - __simulation-model-selection__: It contains code for reproducing results for behaviors of various model selection criteria.
  - __output__: It contains all results.
