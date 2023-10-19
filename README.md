@@ -3,6 +3,14 @@ Reproducibility for the ACCORD Simulations
 
 This repository includes code to reproduce the results of the ACCORD simulations.
 
+Installation
+---------------
+
+Install the package in development mode using the following command:
+```
+pip install -e .
+```
+
 Directory Structure
 ---------------
 
