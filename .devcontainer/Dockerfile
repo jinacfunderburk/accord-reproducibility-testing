@@ -1,4 +1,4 @@
-FROM docker.io/jupyter/datascience-notebook:2022-06-20
+FROM docker.io/jupyter/datascience-notebook:2023-05-30
 
 USER root
 
@@ -21,7 +21,7 @@ RUN echo "echo \"Jupyter server token: \$(jupyter server list 2>&1 | grep -oP '(
 RUN pip install pytest pybind11
 
 # Install skggm from develop branch (the main branch doesn't install properly)
-RUN pip install git+https://github.com/skggm/skggm.git@develop
+RUN pip install git+https://github.com/joshuaybang/skggm.git
 
 # Install the archived SPACE package
 RUN wget https://cran.r-project.org/src/contrib/Archive/space/space_0.1-1.tar.gz
