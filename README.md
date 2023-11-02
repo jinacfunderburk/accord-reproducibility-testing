@@ -23,6 +23,6 @@ Directory Structure
 - __simulation-edge-detection__: It contains code for reproducing results for comparing edge detection rates between methods. You can adjust variable *graph_structure* = {'hub-network', 'erdos-renyi'} to reproduce corresponding results. Default is graph_structure = 'hub-network', and the following figure can be obtained by running the *simulation-edge-detection.ipynb* notebook.
     - <img src="./output/manuscript-figures/edge-detection-hub-network.png" alt="plot" width="800"/>
 - __simulation-model-selection__: It contains code for reproducing results for behaviors of various model selection criteria. The following figure can be obtained by running the *simulation-model-selection.ipynb* notebook.
-    - <img src="./output/manuscript-figures/model-selection.png" alt="plot" width="800"/>>
+    - <img src="./output/manuscript-figures/model-selection.png" alt="plot" width="800"/>
 - __output__: All figures will be saved in this location after running notebooks.
   - __manuscript-figures__: It contains figures from the manuscript. The file names should be identical to the ones that will be saved in the parent directory for comparison at ease.
