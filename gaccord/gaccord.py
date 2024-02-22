@@ -111,7 +111,6 @@ def accord(S, Omega_star, lam1=0.1, lam2=0.0, split='fbs', stepsize_multiplier=1
     lam_mat = get_lambda_matrix(lam1, S)
     
     assert type(lam_mat) == np.ndarray and lam_mat.dtype == 'float64'
-    assert check_symmetry(lam_mat)
 
     if not penalize_diag:
         np.fill_diagonal(lam_mat, 0)

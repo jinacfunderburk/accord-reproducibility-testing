@@ -108,3 +108,9 @@ def h1(X, S, lam2):
 
 def h2(X, lam1):
     return -np.log(X.diagonal()).sum() + (lam1 * np.abs(X)).sum()
+
+def newton_one_step(S, Omega):
+    first_two_terms = 2*Omega - Omega @ S @ np.diag(np.diag(Omega)) @ Omega
+    third_term = 0.5*(Omega - np.diag(np.diag(Omega @ S @ Omega.T)) @ Omega)
+    T = first_two_terms - third_term
+    return T
