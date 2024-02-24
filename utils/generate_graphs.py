@@ -21,6 +21,9 @@ def generate_erdos_renyi(p, type='proj', edge_prob=0.01, lower_weight=0.5, upper
                 break
         
         Theta = np.real(Theta)
+        # spread diagonal of precision matrix
+        d = np.random.uniform(spread_diag[0], spread_diag[1], p)
+        Theta = np.diag(d) @ Theta @ np.diag(d)
         Sigma = np.linalg.inv(Theta)
 
     # Peng's method
