@@ -29,7 +29,7 @@ Directory Structure
     - <img src="./output/manuscript-figures/convergence_sp3.png" alt="plot" width="800"/>
 - __simulation-debiasing__: It contains code for reproducing results for debiasing experiments. You can adjust the variable *graph_structure* = {'hub_network', 'erdos_renyi'} to reproduce the corresponding results. The default is graph_structure = 'hub_network', and the following figure can be obtained by running the *simulation-debiasing.ipynb* notebook.
     - <img src="./output/manuscript-figures/debiasing_hub_network.png" alt="plot" width="800"/>
-- __simulation-edge-detection__: It contains code for reproducing results for comparing edge detection rates between methods. You can adjust the variable *graph_structure* = {'hub_network', 'erdos_renyi'} to reproduce the corresponding results. The default is graph_structure = 'hub_network', and the following figure can be obtained by running the *simulation-edge-detection.ipynb* notebook.
-    - <img src="./output/manuscript-figures/edge_detection_hub_network.png" alt="plot" width="800"/>
+- __simulation-edge-detection__: It contains code for reproducing results for comparing edge detection rates between methods. You can adjust the variable *graph_structure* = {'hub_network', 'erdos_renyi'} to reproduce the corresponding results. The following figure can be obtained by running the *simulation-edge-detection.ipynb* notebook. The dashed vertical lines represent the number of edges in the true graphs.
+    - <img src="./output/manuscript-figures/edge_detection.png" alt="plot" width="800"/>
 - __output__: All figures will be saved in this location after running notebooks.
   - __manuscript-figures__: It contains figures from the manuscript. The file names should be identical to the ones that will be saved in the parent directory for easy comparison.
