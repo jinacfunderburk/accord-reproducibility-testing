@@ -20,6 +20,19 @@ def partial_corr(Theta):
     
     return Rho
 
+def partial_corr_to_precision(Rho, diagonal_values):
+    p = len(Rho)
+    Theta = np.zeros_like(Rho)
+    
+    for i in range(p):
+        for j in range(i + 1, p):
+            Theta[i, j] = -Rho[i, j] / np.sqrt(diagonal_values[i] * diagonal_values[j])
+            Theta[j, i] = Theta[i, j]
+    
+    np.fill_diagonal(Theta, diagonal_values)
+    
+    return Theta
+
 def tp_fp(Theta, Theta_hat):
     Theta_bool = np.where(Theta != 0, 1, 0)
     Theta_hat_bool = np.where(Theta_hat != 0, 1, 0)
@@ -68,6 +81,32 @@ def mcc(Theta, Theta_hat):
     edge_hat = Theta_hat_bool[mask]
     
     return sklearn.metrics.matthews_corrcoef(edge_true, edge_hat)
+
+def compute_average_norm(Theta, Theta_hat):
+    p = len(Theta)
+    Theta_bool = np.where(Theta != 0, 1, 0)
+    Theta_hat_bool = np.where(Theta_hat != 0, 1, 0)
+
+    mask = np.tri(p, p, k=-1, dtype=bool)
+    edge_true = Theta_bool[mask]
+    edge_hat = Theta_hat_bool[mask]
+    TP_indx = np.where((edge_true == 1) & (edge_hat == 1) == 1)[0]
+    FP_indx = np.where((edge_true == 0) & (edge_hat == 1) == 1)[0]
+    FN_indx = np.where((edge_true == 1) & (edge_hat == 0) == 1)[0]
+    count_TP = len(TP_indx)
+    count_FP = len(FP_indx)
+    count_FN = len(FN_indx)
+
+    theta_true = Theta[mask]
+    theta_hat = Theta_hat[mask]
+
+    norm_total = np.linalg.norm(np.tril(Theta) - np.tril(Theta_hat))
+    norm_TP = np.sqrt(np.mean((theta_true[TP_indx]-theta_hat[TP_indx])**2))
+    norm_FP = np.sqrt(np.mean((theta_true[FP_indx]-theta_hat[FP_indx])**2))
+    norm_FN = np.sqrt(np.mean((theta_true[FN_indx]-theta_hat[FN_indx])**2))
+    norm_diag = np.sqrt(np.mean((np.diag(Theta) - np.diag(Theta_hat))**2))
+
+    return norm_total, norm_TP, norm_FP, norm_FN, norm_diag, count_TP, count_FP, count_FN
 
 def pseudo_BIC(X, Theta, modified=False, gamma=0.1):
     n, p = X.shape
