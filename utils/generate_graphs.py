@@ -45,14 +45,14 @@ def generate_erdos_renyi(p, type='proj', edge_prob=0.01, lower_weight=0.5, upper
 
     return Theta, Sigma
 
-def generate_data(p, n_prop_to_p, Sigma, N=1, standardize=True, random_state=2023):
+def generate_data(p, n_prop_to_p, Sigma, N=1, standard=True, random_state=2023):
     Xs = []
     for this in n_prop_to_p:
         n = int(this*p)
         for j in range(N):
             rs = np.random.RandomState(random_state)
             X = rs.multivariate_normal(mean=np.zeros(p), cov=Sigma, size=n)
-            if standardize:
+            if standard:
                 X = standardize(X, bias=False)   
             Xs.append(X)
             random_state += 1
